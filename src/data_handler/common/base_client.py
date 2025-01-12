@@ -13,7 +13,7 @@ class BaseClient(ABC):
 
 class AsyncBaseClient(BaseClient):
     """
-    Base client for interacting with httpx client.
+    Base data_handler for interacting with httpx data_handler.
     """
     def __init__(self,
                  timeout: int,

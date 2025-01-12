@@ -2,15 +2,15 @@ import asyncio
 from abc import ABC, abstractmethod
 from warnings import deprecated
 
-from client.common.base_client import AsyncBaseClient
-from client.oqmd.paginator import Paginator
+from data_handler.common.base_client import AsyncBaseClient
+from data_handler.oqmd.paginator import Paginator
 
 
 class OQMDAbstractClient(ABC):
     """
     Abstract base class for OQMD clients.
-    OQMD API returns data by pages - so requests made with paginated params to retrieve all data.
-    `max_users` param can be set to retrieve only set pages data.
+    OQMD API returns test_data by pages - so requests made with paginated params to retrieve all test_data.
+    `max_users` param can be set to retrieve only set pages test_data.
     """
     BASE_URL = "https://oqmd.org/oqmdapi"
     OPTIMADE_URL = "https://oqmd.org/optimade"
@@ -54,10 +54,10 @@ class OQMDAbstractClient(ABC):
         """
         pass
 
-    def _get_oqmd_url(self, endpoint: str):
+    def __get_oqmd_url(self, endpoint: str):
         return f'{self.BASE_URL}/{endpoint}'
 
-    def _get_optimade_url(self, endpoint: str):
+    def __get_optimade_url(self, endpoint: str):
         return f'{self.OPTIMADE_URL}/{endpoint}'
 
     @staticmethod
@@ -83,7 +83,7 @@ class OQMDAbstractClient(ABC):
     async def _get_all_data(self, url: str, params: dict, max_pages: int | None = None) -> list:
         response = await self._async_client.get(url, params=params)
         response_json = response.json()
-        data_field_name = "data" if "calculation" not in url else "results"
+        data_field_name = "test_data" if "calculation" not in url else "results"
         if "meta" not in response_json or "next" not in response_json:
             return response_json[data_field_name]
         meta = response_json.get("meta", None)
@@ -115,7 +115,7 @@ class OQMDAbstractClient(ABC):
 
     async def _oqmd_request(self, endpoint: str, fields: list[str] = None, filters: dict[str, str] | None = None,
                             max_pages: int | None = None):
-        url = self._get_oqmd_url(endpoint)
+        url = self.__get_oqmd_url(endpoint)
         params = self._build_params_for_request(fields=fields, filters=filters)
         return await self._get_all_data(url=url,
                                         params=params,
@@ -123,7 +123,7 @@ class OQMDAbstractClient(ABC):
 
     async def _optimade_request(self, endpoint: str, fields: list[str] = None, filters: dict[str, str] | None = None,
                                 max_pages: int | None = None):
-        url = self._get_optimade_url(endpoint)
+        url = self.__get_optimade_url(endpoint)
         params = self._build_params_for_request(fields=fields, filters=filters)
         return await self._get_all_data(url=url,
                                         params=params,
@@ -132,7 +132,7 @@ class OQMDAbstractClient(ABC):
 
 class OQMDAsyncClient(OQMDAbstractClient):
     """
-    Asynchronous OQMD client that implements the abstract endpoints.
+    Asynchronous OQMD data_handler that implements the abstract endpoints.
     """
 
     def __init__(self):
