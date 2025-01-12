@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "perovskite-analysis"
+name = "perovskite-data-analysis"
 version = "0.0.1"
 authors = ["Arman Hovhannisyan <hovhannisyanarman062@gmail.com>"]
 description = "Perovskite analysis with ML"
