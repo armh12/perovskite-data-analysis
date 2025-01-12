@@ -60,4 +60,22 @@ def assert_valid_oqmd_structures_with_set_fields(structures_response: list):
     print(single_data)
 
 
+CALCULATION_COLUMNS = ["id", "entry", "composition", "path", "label", "band_gap", "converged", "energy_pa"]
 
+
+def assert_valid_oqmd_calculation(calculations_response):
+    assert isinstance(calculations_response, list)
+    single_data = calculations_response[0]
+    assert isinstance(single_data, dict)
+    assert "composition" in single_data
+    assert "label" in single_data
+    assert isinstance(single_data["band_gap"], float)
+    assert isinstance(single_data["converged"], bool)
+    assert isinstance(single_data["energy_pa"], float)
+
+
+def assert_valid_oqmd_calculation_with_set_fields(calculations_response: list):
+    single_data = calculations_response[0]
+    fields = list(single_data.keys())
+    assert len(fields) != len(OQMD_PHASES_COLUMNS)
+    assert sorted(fields) != sorted(OQMD_PHASES_COLUMNS)

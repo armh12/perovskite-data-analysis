@@ -1,5 +1,6 @@
 import asyncio
 from abc import ABC, abstractmethod
+from warnings import deprecated
 
 from client.common.base_client import AsyncBaseClient
 from client.oqmd.paginator import Paginator
@@ -82,10 +83,15 @@ class OQMDAbstractClient(ABC):
     async def _get_all_data(self, url: str, params: dict, max_pages: int | None = None) -> list:
         response = await self._async_client.get(url, params=params)
         response_json = response.json()
-        data_available = response_json["meta"].get('data_available', None)
+        data_field_name = "data" if "calculation" not in url else "results"
+        if "meta" not in response_json or "next" not in response_json:
+            return response_json[data_field_name]
+        meta = response_json.get("meta", None)
+        if meta is None and "next" in response_json and not max_pages:
+            return response_json[data_field_name]
+        data_available = meta.get('data_available', max_pages)
         if not data_available:
-            return response_json["data"]
-
+            return response_json[data_field_name]
         data_available = max_pages if max_pages is not None else data_available
         paginator = self.__get_paginator(data_available)
         tasks = [
@@ -97,9 +103,9 @@ class OQMDAbstractClient(ABC):
         results = []
         for task_result in tasks_results:
             if isinstance(task_result, dict):
-                results.extend(task_result["data"])
+                results.extend(task_result[data_field_name])
             else:
-                results.extend(task_result.json()["data"])
+                results.extend(task_result.json()[data_field_name])
         return results
 
     def __get_paginator(self, max_pages: int) -> Paginator:
@@ -146,6 +152,7 @@ class OQMDAsyncClient(OQMDAbstractClient):
                                             filters=filters,
                                             max_pages=max_pages)
 
+    @deprecated("Endpoint does not working in API")
     async def get_entries(self, fields: list[str] = None, filters: dict[str, str] | None = None,
                           max_pages: int | None = None) -> list[dict]:
         return await self._oqmd_request("entry",
