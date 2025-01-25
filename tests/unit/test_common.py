@@ -1,8 +1,7 @@
 import numpy as np
 import pandas as pd
-import pytest
 
-from data_handler.common.data_features import decompose_sites, split_element_names
+from data_handler.common.data_features import decompose_sites, split_element_names, _decompose_sites
 
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
@@ -26,5 +25,3 @@ def test_split_element_names(df_phases):
     assert all([df_phases[col].dtype == np.object_ for col in obj_cols])
     assert all([num_cols in df_phases.columns for num_cols in num_cols])
     assert all([df_phases[col].dtype == np.int64 for col in num_cols])
-
-

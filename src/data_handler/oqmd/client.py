@@ -83,7 +83,7 @@ class OQMDAbstractClient(ABC):
     async def _get_all_data(self, url: str, params: dict, max_pages: int | None = None) -> list:
         response = await self._async_client.get(url, params=params)
         response_json = response.json()
-        data_field_name = "test_data" if "calculation" not in url else "results"
+        data_field_name = "data" if "calculation" not in url else "results"
         if "meta" not in response_json or "next" not in response_json:
             return response_json[data_field_name]
         meta = response_json.get("meta", None)
