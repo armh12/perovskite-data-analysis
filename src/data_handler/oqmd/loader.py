@@ -1,20 +1,12 @@
 from data_handler.oqmd.client import OQMDAsyncClient
+from data_handler.oqmd.perovskite_data import PerovskiteDataHandler
 
 
 class PerovskiteLoader:
-    PEROVSKITE_GENERIC_COMPOSITION = "ABC3"
-    PHASES_DF_FIELDS = ["name", "entry_id", "composition", "volume", "ntypes", "natoms", ]
-    def __init__(self,
-                 chunk_size: int = 1000,
-                 ):
-        self._client = OQMDAsyncClient()
-        self.initial_offset = 0
-        self.chunk_size = chunk_size
+    def __init__(self, oqmd_client: OQMDAsyncClient, data_handler: PerovskiteDataHandler):
+        self.oqmd_client = oqmd_client
+        self.data_handler = data_handler
 
-    def _load_by_chunk(self):
+    async def process_phases(self):
         ...
-
-    def _load_phases_dataframe(self):
-        ...
-
 

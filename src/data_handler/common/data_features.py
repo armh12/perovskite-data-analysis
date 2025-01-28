@@ -1,48 +1,32 @@
-import re
 import ast
 import pandas as pd
-from collections import Counter
+from pymatgen.core.lattice import Lattice
+from pymatgen.core.molecular_orbitals import MolecularOrbitals
+from pymatgen.core.sites import Site
 
 
-def filter_perovkiste_by_name(df: pd.DataFrame) -> pd.DataFrame:
+def filter_valid_perovkiste_by_name(df: pd.DataFrame) -> pd.DataFrame:
     if "name" in df.columns:
         df = df[df["name"].str.endswith("3")]
     return df
 
 
-def parse_formula(formula):
-    pattern = r'([A-Z][a-z]?)(\d*)'
-    matches = re.findall(pattern, formula)
-
-    composition = {}
-    for (element, count) in matches:
-        if count == '':
-            count = 1
-        else:
-            count = int(count)
-        if element in composition:
-            composition[element] += count
-        else:
-            composition[element] = count
-    print(composition)
-    return composition
+def parse_formula(formula: str) -> pd.Series:
+    molecular_orbitals = MolecularOrbitals(formula)
+    return molecular_orbitals.composition
 
 
 def decompose_sites(phases_df: pd.DataFrame) -> pd.DataFrame:
     def __parse_site(site_str: str):
-        try:
-            element, coords = site_str.split('@')
-            x, y, z = map(float, coords.strip().split())
-            return element, x, y, z
-        except Exception:
-            return None, None, None, None
+        element, coords = site_str.split('@')
+        x, y, z = map(float, coords.strip().split())
+        sites = Site(element, ((x, y, z)))
+        print(sites)
+        return element, x, y, z
 
-    def __get_element_count(sites_list: str) -> Counter:
-        elements = [site_list.split("@")[0].strip() for site_list in sites_list]
-        elements_count = Counter(elements)
-        return elements_count
-
-    def __process_sites(sites_list):
+    def __process_sites(row: pd.Series):
+        sites_list = row.sites
+        elements = row.__elements
         if isinstance(sites_list, str):
             try:
                 sites_list = ast.literal_eval(sites_list)
@@ -50,46 +34,63 @@ def decompose_sites(phases_df: pd.DataFrame) -> pd.DataFrame:
                 sites_list = []
 
         site_dict = {}
-        elements_count = __get_element_count(sites_list)
 
-        for idx, site in enumerate(sites_list):
+        for site in sites_list:
             element, x, y, z = __parse_site(site)
-            if elements_count[element] == 1:
+            idx = elements.index(element.strip())
+            if idx == 0:
                 prefix = 'A'
-            elif elements_count[element] == 1:
+            elif idx == 1:
                 prefix = 'B'
             else:
-                prefix = f'X{idx - 1}'
+                prefix = "X"
             site_dict[f'{prefix}_x'] = x
             site_dict[f'{prefix}_y'] = y
             site_dict[f'{prefix}_z'] = z
 
         return pd.Series(site_dict)
 
-    sites_expanded = phases_df["sites"].apply(__process_sites)
+    phases_df["__elements"] = phases_df["_composition"].apply(lambda x: list(x.keys()))
+    sites_expanded = phases_df[["sites", "__elements"]].apply(__process_sites, axis=1)
 
     phases_df = pd.concat([phases_df, sites_expanded], axis=1)
-    phases_df.drop(columns=["sites"], inplace=True)
+    phases_df.drop(columns=["sites", "__elements"], inplace=True)
     return phases_df
 
 
 def split_element_names(phases_df: pd.DataFrame):
-    def __parse_composition(comp_str):
-        pattern = r'([A-Z][a-z]?)(\d+)'
-        matches = re.findall(pattern, comp_str)
-        elements = [match[0] for match in matches]
-        counts = [int(match[1]) for match in matches]
-        return elements, counts
+    def __parse_composition(composition_dict: dict):
+        element_dict = {}
+        for idx, (element_name, element_count) in enumerate(composition_dict.items()):
+            if idx == 0:
+                prefix = "A"
+            elif idx == 1:
+                prefix = "B"
+            else:
+                prefix = "X"
+            element_dict[f'{prefix}_element'] = element_name
+            element_dict[f'{prefix}_count'] = element_count
+        return pd.Series(element_dict)
 
-    parsed = phases_df["composition"].apply(__parse_composition)
+    parsed = phases_df["_composition"].apply(__parse_composition)
+    phases_df = pd.concat([phases_df, parsed], axis=1)
+    return phases_df
 
-    phases_df['A_element'] = parsed.apply(lambda x: x[0][0] if len(x[0]) > 0 else None)
-    phases_df['A_count'] = parsed.apply(lambda x: x[1][0] if len(x[1]) > 0 else None)
 
-    phases_df['B_element'] = parsed.apply(lambda x: x[0][1] if len(x[0]) > 1 else None)
-    phases_df['B_count'] = parsed.apply(lambda x: x[1][1] if len(x[1]) > 1 else None)
+def parse_unit_cells(phases_df: pd.DataFrame) -> pd.DataFrame:
+    def __parse_unit_cell(unit_cell: list[list]) -> pd.Series:
+        lattice = Lattice(unit_cell)
+        lattice_dict = {
+            "a": lattice.a,
+            "b": lattice.b,
+            "c": lattice.c,
+            "alpha": lattice.alpha,
+            "beta": lattice.beta,
+            "gamma": lattice.gamma,
+        }
+        return pd.Series(lattice_dict)
 
-    phases_df['C_element'] = parsed.apply(lambda x: x[0][2] if len(x[0]) > 2 else None)
-    phases_df['C_count'] = parsed.apply(lambda x: x[1][2] if len(x[1]) > 2 else None)
-
+    unit_cell_parsed = phases_df["unit_cell"].apply(__parse_unit_cell)
+    phases_df = pd.concat([phases_df, unit_cell_parsed], axis=1)
+    phases_df.drop(columns=["unit_cell"], inplace=True)
     return phases_df

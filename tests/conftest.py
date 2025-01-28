@@ -3,6 +3,7 @@ import os
 import pandas as pd
 
 from data_handler.oqmd.client import OQMDAsyncClient
+from data_handler.oqmd.perovskite_data import PerovskiteDataHandler
 
 TEST_DATA_PATH = os.path.normpath(os.path.join(os.path.dirname(__file__), "test_data"))
 
@@ -28,3 +29,8 @@ def df_calcs_fixture() -> pd.DataFrame:
 def df_structures_fixture() -> pd.DataFrame:
     df = pd.read_parquet(os.path.join(TEST_DATA_PATH, "df_structures.parquet"))
     return df
+
+
+@pytest.fixture(name="perovskite_provider")
+def perovskite_provider_fixture(oqmd_client):
+    return PerovskiteDataHandler(oqmd_client)

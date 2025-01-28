@@ -31,8 +31,7 @@ class OQMDAbstractClient(ABC):
         pass
 
     @abstractmethod
-    async def get_structures(self, fields: list[str] = None, filters: dict[str, str] | None = None,
-                             max_pages: int | None = None):
+    async def get_structures(self, filters: dict[str, str] | None = None, max_pages: int | None = None):
         """
         This corresponds to hitting /optimade/structures
         """
@@ -119,7 +118,7 @@ class OQMDAbstractClient(ABC):
         params = self._build_params_for_request(fields=fields, filters=filters)
         return await self._get_all_data(url=url,
                                         params=params,
-                                        max_pages=max_pages)
+                                        max_pages=max_pages,)
 
     async def _optimade_request(self, endpoint: str, fields: list[str] = None, filters: dict[str, str] | None = None,
                                 max_pages: int | None = None):
@@ -143,12 +142,10 @@ class OQMDAsyncClient(OQMDAbstractClient):
         return await self._oqmd_request("formationenergy",
                                         fields=fields,
                                         filters=filters,
-                                        max_pages=max_pages)
+                                        max_pages=max_pages,)
 
-    async def get_structures(self, fields: list[str] = None, filters: dict[str, str] | None = None,
-                             max_pages: int | None = None) -> list[dict]:
+    async def get_structures(self, filters: dict[str, str] | None = None, max_pages: int | None = None) -> list[dict]:
         return await self._optimade_request("structures",
-                                            fields=fields,
                                             filters=filters,
                                             max_pages=max_pages)
 
