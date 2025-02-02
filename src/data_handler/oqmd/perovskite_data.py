@@ -2,7 +2,7 @@ import pandas as pd
 
 from data_handler.common.data_features import decompose_sites, split_element_names, filter_valid_perovkiste_by_name, \
     parse_formula, parse_lattice_vectors, add_density, add_tolerance_factor, get_composition_features, classify_material
-from data_handler.oqmd.client import OQMDAsyncClient
+from data_handler.oqmd.client import OQMDClient
 
 
 class PerovskiteDataHandler:
@@ -12,11 +12,11 @@ class PerovskiteDataHandler:
     structures_fields = ["chemical_formula_reduced", "_oqmd_entry_id", "lattice_vectors", "species_at_sites"]
 
     def __init__(self,
-                 client: OQMDAsyncClient, ):
+                 client: OQMDClient, ):
         self.client = client
 
-    async def get_phases(self, max_pages: int | None = None) -> pd.DataFrame:
-        json_response = await self.client.get_phases(self.phases_fields, self.PEROVSKITE_FILTER, max_pages)
+    def get_phases(self, max_pages: int | None = None) -> pd.DataFrame:
+        json_response = self.client.get_phases(self.phases_fields, self.PEROVSKITE_FILTER, max_pages)
         df = pd.DataFrame(json_response)
         df = filter_valid_perovkiste_by_name(df, "name")
         df["_composition"] = df["name"].apply(parse_formula)
@@ -28,8 +28,8 @@ class PerovskiteDataHandler:
         df.rename(columns={"delta_e": "e_hull", "entry_id": "id"}, inplace=True)
         return df
 
-    async def get_structures(self, max_pages: int | None = None) -> pd.DataFrame:
-        json_response = await self.client.get_structures(self.PEROVSKITE_FILTER, max_pages)
+    def get_structures(self, max_pages: int | None = None) -> pd.DataFrame:
+        json_response = self.client.get_structures(self.PEROVSKITE_FILTER, max_pages)
         attrs = [_json_response["attributes"] for _json_response in json_response]
         df = pd.DataFrame(attrs)
         df = df[self.structures_fields]
@@ -42,7 +42,7 @@ class PerovskiteDataHandler:
         df.drop(columns=["_composition", "species_at_sites"], inplace=True)
         return df
 
-    async def get_calculations(self, max_pages: int | None = None) -> pd.DataFrame:
-        json_response = await self.client.get_calculations(None, self.PEROVSKITE_FILTER, max_pages)
+    def get_calculations(self, max_pages: int | None = None) -> pd.DataFrame:
+        json_response = self.client.get_calculations(None, self.PEROVSKITE_FILTER, max_pages)
         df = pd.DataFrame(json_response)
         return df
