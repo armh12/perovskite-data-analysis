@@ -15,8 +15,10 @@ class PerovskiteDataHandler:
                  client: OQMDClient, ):
         self.client = client
 
-    def get_phases(self, max_pages: int | None = None) -> pd.DataFrame:
-        json_response = self.client.get_phases(self.phases_fields, self.PEROVSKITE_FILTER, max_pages)
+    def get_phases(self, max_pages: int | None = None, request_offset: int = 50,
+                   request_limit: int | None = None) -> pd.DataFrame:
+        json_response = self.client.get_phases(self.phases_fields, self.PEROVSKITE_FILTER, max_pages, request_offset,
+                                               request_limit)
         df = pd.DataFrame(json_response)
         df = filter_valid_perovkiste_by_name(df, "name")
         df["_composition"] = df["name"].apply(parse_formula)
@@ -28,8 +30,9 @@ class PerovskiteDataHandler:
         df.rename(columns={"delta_e": "e_hull", "entry_id": "id"}, inplace=True)
         return df
 
-    def get_structures(self, max_pages: int | None = None) -> pd.DataFrame:
-        json_response = self.client.get_structures(self.PEROVSKITE_FILTER, max_pages)
+    def get_structures(self, max_pages: int | None = None, request_offset: int = 50,
+                   request_limit: int | None = None) -> pd.DataFrame:
+        json_response = self.client.get_structures(self.PEROVSKITE_FILTER, max_pages, request_offset, request_limit)
         attrs = [_json_response["attributes"] for _json_response in json_response]
         df = pd.DataFrame(attrs)
         df = df[self.structures_fields]

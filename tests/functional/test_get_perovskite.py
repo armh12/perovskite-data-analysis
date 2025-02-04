@@ -1,4 +1,3 @@
-import pytest
 import pandas as pd
 
 MAX_PAGES = 100
