@@ -1,15 +1,13 @@
 import pytest
 
-from tests.assertions import assert_valid_oqmd_phases, assert_valid_oqmd_structures, \
-    assert_valid_oqmd_phases_with_set_fields, assert_valid_oqmd_calculation, \
-    assert_valid_oqmd_calculation_with_set_fields
+from tests.assertions import assert_valid_oqmd_phases, assert_valid_oqmd_phases_with_set_fields, assert_valid_oqmd_calculation,\
+    assert_valid_oqmd_calculation_with_set_fields, assert_valid_oqmd_structures, assert_valid_oqmd_structures_with_set_fields
 
 MAX_PAGES = 100
 
 
-@pytest.mark.asyncio
-async def test_request_phases(oqmd_client):
-    response = await oqmd_client.get_phases(max_pages=MAX_PAGES)
+def test_request_phases(oqmd_client):
+    response = oqmd_client.get_phases(max_pages=MAX_PAGES)
     assert_valid_oqmd_phases(response)
 
 

@@ -6,7 +6,7 @@ from pymatgen.core.lattice import Lattice
 from pymatgen.core.molecular_orbitals import MolecularOrbitals
 from pymatgen.core.periodic_table import Element
 
-from data_handler.common.entities import AM3_TO_SM3, AMU_TO_GRAM
+from perovskite_data_analysis.common.entities import AM3_TO_SM3, AMU_TO_GRAM
 
 
 def filter_valid_perovkiste_by_name(df: pd.DataFrame, field_name: str) -> pd.DataFrame:

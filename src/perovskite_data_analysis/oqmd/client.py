@@ -1,11 +1,11 @@
+import logging
 from abc import ABC, abstractmethod
-from warnings import deprecated
 from functools import wraps
 import httpx
 import time
 
-from data_handler.common.base_client import Client
-from data_handler.oqmd.paginator import Paginator
+from perovskite_data_analysis.common.base_client import Client
+from perovskite_data_analysis.oqmd.paginator import Paginator
 
 RETRY_DELAY_SEC = 15
 RETRY_COUNT = 10
@@ -39,8 +39,10 @@ class OQMDAbstractClient(ABC):
     BASE_URL = "https://oqmd.org/oqmdapi"
     OPTIMADE_URL = "https://oqmd.org/optimade"
 
-    def __init__(self, ):
+    def __init__(self,
+                 logger: logging.Logger,):
         self._client = Client(timeout=100, read_timeout=100)
+        self.log = logger
 
     @abstractmethod
     def get_phases(self, fields: list[str] | None = None, filters: dict[str, str] | None = None,
@@ -54,14 +56,6 @@ class OQMDAbstractClient(ABC):
     def get_structures(self, filters: dict[str, str] | None = None, max_pages: int | None = None):
         """
         This corresponds to hitting /optimade/structures
-        """
-        pass
-
-    @abstractmethod
-    def get_entries(self, fields: list[str] = None, filters: dict[str, str] | None = None,
-                    max_pages: int | None = None):
-        """
-        This corresponds to hitting /oqmdapi/entry
         """
         pass
 
@@ -100,50 +94,48 @@ class OQMDAbstractClient(ABC):
         return params
 
     @http_error_handler
-    def _get_all_data(self, url: str, params: dict, max_pages: int | None = None,
-                      request_offset: int = 50, request_limit: int | None = None) -> list:
-        response = self._client.get(url, params=params)
-        response_json = response.json()
-        data_field_name = "data" if "calculation" not in url else "results"
-        if "meta" not in response_json and "next" not in response_json:
-            return response_json[data_field_name]
-        meta = response_json.get("meta", None)
-        if meta is None and "next" in response_json and not max_pages:
-            return response_json[data_field_name]
-        data_available = request_limit if request_limit is not None else meta.get('data_available', max_pages)
-        if not data_available:
-            return response_json[data_field_name]
-        data_available = max_pages if max_pages is not None else data_available
-        paginator = self.__get_paginator(data_available, request_offset, request_limit)
-        responses = [response_json[data_field_name], ]
-        for _params in paginator.make_params_paginated(params):
-            _response = self._client.get(url, params=_params)
-            _response_json = response.json()
-            if isinstance(_response_json, dict):
-                responses.append(_response_json[data_field_name])
-            else:
-                responses.extend(_response_json[data_field_name])
+    def _get_all_data(self, url: str, params: dict, data_field_name: str, max_pages: int = 50) -> list:
+        """
+        OQMD API have next URL in response body, but requesting to next is returning 301 status code response,
+        so we will use paginator to avoiding next URL usage.
+        """
+        # make single request to get all metadata
+        first_response = self._client.get(url, params=params)
+        first_response_json = first_response.json()
+        # make paginator
+        metadata = first_response_json["meta"]
+        data_available = metadata["data_available"]
+        offset = metadata["data_returned"]
+        paginator = self.__get_paginator(offset, max_pages, data_available)
+        # add first_response to results
+        responses = []
+        responses = self._register_result(responses, first_response_json[data_field_name])
+
+        # make paginated requests
+        for _param in paginator.make_params_paginated(params):
+            self.log.info(f'Make request on offset - {_param["offset"]}')
+            response = self._client.get(url, params=_param)
+            responses = self._register_result(responses, response.json()[data_field_name])
         return responses
 
+
     def _oqmd_request(self, endpoint: str, fields: list[str] = None, filters: dict[str, str] | None = None,
-                      max_pages: int | None = None, request_offset: int = 50, request_limit: int | None = None):
+                      max_pages: int = 50):
         url = self.__get_oqmd_url(endpoint)
         params = self._build_params_for_request(fields=fields, filters=filters)
         return self._get_all_data(url=url,
                                   params=params,
-                                  max_pages=max_pages,
-                                  request_offset=request_offset,
-                                  request_limit=request_limit)
+                                  data_field_name="data" if "calculation" not in url else "results",
+                                  max_pages=max_pages)
 
     def _optimade_request(self, endpoint: str, fields: list[str] = None, filters: dict[str, str] | None = None,
-                          max_pages: int | None = None, request_offset: int = 50, request_limit: int | None = None):
+                          max_pages: int = 50):
         url = self.__get_optimade_url(endpoint)
         params = self._build_params_for_request(fields=fields, filters=filters)
         return self._get_all_data(url=url,
                                   params=params,
                                   max_pages=max_pages,
-                                  request_offset=request_offset,
-                                  request_limit=request_limit)
+                                  data_field_name="results")
 
     @staticmethod
     def __get_paginator(pagination_offset: int, pagination_limit: int, max_pages: int) -> Paginator:
@@ -151,50 +143,47 @@ class OQMDAbstractClient(ABC):
                          pagination_limit=pagination_limit,
                          total_pages_count=max_pages)
 
+    @staticmethod
+    def _register_result(responses: list, response: list | dict):
+        if isinstance(response, list):
+            responses.extend(response)
+        elif isinstance(response, dict):
+            responses.append(response)
+        return responses
+
 
 class OQMDClient(OQMDAbstractClient):
     """
-    Asynchronous OQMD data_handler that implements the abstract endpoints.
+    Asynchronous OQMD perovskite_data_analysis that implements the abstract endpoints.
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, logger: logging.Logger):
+        super().__init__(logger)
 
     def get_phases(self, fields: list[str] | None = None, filters: dict[str, str] | None = None,
-                   max_pages: int | None = None, request_offset: int = 50, request_limit: int | None = None) -> list[
-        dict]:
+                   max_pages: int = 50) -> list[dict]:
+        self.log.info("Start phases extraction")
         return self._oqmd_request("formationenergy",
                                   fields=fields,
                                   filters=filters,
-                                  max_pages=max_pages,
-                                  request_offset=request_offset,
-                                  request_limit=request_limit)
+                                  max_pages=max_pages,)
 
-    def get_structures(self, filters: dict[str, str] | None = None, max_pages: int | None = None,
-                       request_offset: int = 50, request_limit: int | None = None) -> list[dict]:
+    def get_structures(self, filters: dict[str, str] | None = None, max_pages: int = 50) -> list[dict]:
+        self.log.info("Start structures extraction")
         return self._optimade_request("structures",
                                       filters=filters,
-                                      max_pages=max_pages,
-                                      request_offset=request_offset,
-                                      request_limit=request_limit
-                                      )
-
-    @deprecated("Endpoint does not working in API")
-    def get_entries(self, fields: list[str] = None, filters: dict[str, str] | None = None, max_pages: int | None = None,
-                    request_offset: int = 50, request_limit: int | None = None) -> list[dict]:
-        return self._oqmd_request("entry",
-                                  fields=fields,
-                                  filters=filters,
-                                  max_pages=max_pages,
-                                  request_offset=request_offset,
-                                  request_limit=request_limit)
+                                      max_pages=max_pages,)
 
     def get_calculations(self, fields: list[str] = None, filters: dict[str, str] | None = None,
-                         max_pages: int | None = None, request_offset: int = 50, request_limit: int | None = None) \
-            -> list[dict]:
+                         max_pages: int = 50) -> list[dict]:
+        self.log.info("Start calculations extraction")
         return self._oqmd_request("calculation",
                                   fields=fields,
                                   filters=filters,
-                                  max_pages=max_pages,
-                                  request_offset=request_offset,
-                                  request_limit=request_limit)
+                                  max_pages=max_pages,)
+
+
+if __name__ == "__main__":
+    client = OQMDClient()
+    resp = client.get_phases(filters={"generic": "ABC3"})
+    print(resp)

@@ -1,8 +1,9 @@
 import pandas as pd
 
-from data_handler.common.data_features import decompose_sites, split_element_names, filter_valid_perovkiste_by_name, \
+from perovskite_data_analysis.common.data_features import decompose_sites, split_element_names, \
+    filter_valid_perovkiste_by_name, \
     parse_formula, parse_lattice_vectors, add_density, add_tolerance_factor, get_composition_features, classify_material
-from data_handler.oqmd.client import OQMDClient
+from perovskite_data_analysis.oqmd.client import OQMDClient
 
 
 class PerovskiteDataHandler:
@@ -15,10 +16,8 @@ class PerovskiteDataHandler:
                  client: OQMDClient, ):
         self.client = client
 
-    def get_phases(self, max_pages: int | None = None, request_offset: int = 50,
-                   request_limit: int | None = None) -> pd.DataFrame:
-        json_response = self.client.get_phases(self.phases_fields, self.PEROVSKITE_FILTER, max_pages, request_offset,
-                                               request_limit)
+    def get_phases(self, max_pages: int = 50) -> pd.DataFrame:
+        json_response = self.client.get_phases(self.phases_fields, self.PEROVSKITE_FILTER, max_pages)
         df = pd.DataFrame(json_response)
         df = filter_valid_perovkiste_by_name(df, "name")
         df["_composition"] = df["name"].apply(parse_formula)
@@ -30,9 +29,8 @@ class PerovskiteDataHandler:
         df.rename(columns={"delta_e": "e_hull", "entry_id": "id"}, inplace=True)
         return df
 
-    def get_structures(self, max_pages: int | None = None, request_offset: int = 50,
-                   request_limit: int | None = None) -> pd.DataFrame:
-        json_response = self.client.get_structures(self.PEROVSKITE_FILTER, max_pages, request_offset, request_limit)
+    def get_structures(self, max_pages: int = 50) -> pd.DataFrame:
+        json_response = self.client.get_structures(self.PEROVSKITE_FILTER, max_pages)
         attrs = [_json_response["attributes"] for _json_response in json_response]
         df = pd.DataFrame(attrs)
         df = df[self.structures_fields]
@@ -45,7 +43,7 @@ class PerovskiteDataHandler:
         df.drop(columns=["_composition", "species_at_sites"], inplace=True)
         return df
 
-    def get_calculations(self, max_pages: int | None = None) -> pd.DataFrame:
+    def get_calculations(self, max_pages: int = 50) -> pd.DataFrame:
         json_response = self.client.get_calculations(None, self.PEROVSKITE_FILTER, max_pages)
         df = pd.DataFrame(json_response)
         return df

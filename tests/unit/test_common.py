@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from data_handler.common.data_features import decompose_sites, split_element_names, _decompose_sites
+from perovskite_data_analysis.common.data_features import decompose_sites, split_element_names, _decompose_sites
 
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
