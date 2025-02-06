@@ -3,14 +3,17 @@ import os
 import pandas as pd
 
 from perovskite_data_analysis.oqmd.client import OQMDClient
+from perovskite_data_analysis.oqmd.configuration import build_configuration
 from perovskite_data_analysis.oqmd.perovskite_data import PerovskiteDataHandler
 
 TEST_DATA_PATH = os.path.normpath(os.path.join(os.path.dirname(__file__), "test_data"))
 
+config = build_configuration()
+
 
 @pytest.fixture(name="oqmd_client")
 def oqmd_client_fixture() -> OQMDClient:
-    return OQMDClient()
+    return OQMDClient(logger=config.logger)
 
 
 @pytest.fixture(name="df_phases")

@@ -15,12 +15,15 @@ def filter_valid_perovkiste_by_name(df: pd.DataFrame, field_name: str) -> pd.Dat
     return df
 
 
-def parse_formula(formula: str) -> pd.Series:
-    molecular_orbitals = MolecularOrbitals(formula)
-    return molecular_orbitals.composition
+def parse_formula(formula: str) -> pd.Series | None:
+    try:
+        molecular_orbitals = MolecularOrbitals(formula)
+        return molecular_orbitals.composition
+    except Exception:
+        return None
 
 
-def classify_material(formula: str) -> str:
+def classify_material(formula: str) -> str | None:
     """
     Classify a material as 'organic', 'inorganic', or 'semi-organic' based on its formula.
 
@@ -41,42 +44,51 @@ def classify_material(formula: str) -> str:
     Returns:
       str: One of "organic", "semi-organic", or "inorganic".
         """
-    comp = Composition(formula)
-    elements = [str(el) for el in comp.elements]
+    try:
+        comp = Composition(formula)
+        elements = [str(el) for el in comp.elements]
 
-    metals = []
-    for el in elements:
-        try:
-            if Element(el).is_metal:
-                metals.append(el)
-        except Exception:
-            pass
+        metals = []
+        for el in elements:
+            try:
+                if Element(el).is_metal:
+                    metals.append(el)
+            except Exception:
+                pass
 
-    contains_carbon = "C" in elements
-    contains_hydrogen = "H" in elements
+        contains_carbon = "C" in elements
+        contains_hydrogen = "H" in elements
 
-    if contains_carbon and contains_hydrogen:
-        if metals:
-            return "semi-organic"
+        if contains_carbon and contains_hydrogen:
+            if metals:
+                return "semi-organic"
+            else:
+                return "organic"
         else:
-            return "organic"
-    else:
-        return "inorganic"
+            return "inorganic"
+    except Exception:
+        return None
 
 
-def get_composition_features(df: pd.DataFrame) -> pd.DataFrame:
+def get_composition_features(structures_df: pd.DataFrame) -> pd.DataFrame:
     def __parse_composition(formula: str) -> pd.Series:
-        composition = Composition(formula)
-        weight = composition.weight
-        avg_elec_negativity = composition.average_electroneg
-        scalar_series = pd.Series({
-            "weight": weight,
-            "avg_elec_negativity": avg_elec_negativity
-        })
-        return scalar_series
+        try:
+            composition = Composition(formula)
+            weight = composition.weight
+            avg_elec_negativity = composition.average_electroneg
+            scalar_series = pd.Series({
+                "weight": weight,
+                "avg_elec_negativity": avg_elec_negativity
+            })
+            return scalar_series
+        except Exception:
+            return pd.Series({
+                "weight": None,
+                "avg_elec_negativity": None
+            })
 
-    parsed_df = df["chemical_formula_reduced"].apply(__parse_composition)
-    df = pd.concat([df, parsed_df], axis=1)
+    parsed_df = structures_df["chemical_formula_reduced"].apply(__parse_composition)
+    df = pd.concat([structures_df, parsed_df], axis=1)
     return df
 
 
@@ -96,7 +108,8 @@ def decompose_sites(phases_df: pd.DataFrame) -> pd.DataFrame:
                 sites_list = []
 
         site_dict = {}
-
+        if len(sites_list) == 0:
+            return None
         for site in sites_list:
             element, x, y, z = __parse_site(site)
             idx = elements.index(element.strip())

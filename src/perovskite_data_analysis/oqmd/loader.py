@@ -1,14 +1,12 @@
 import os
 import pandas as pd
-from logging import getLogger
 
-from perovskite_data_analysis.oqmd.client import OQMDClient
 from perovskite_data_analysis.oqmd.configuration import Configuration, build_configuration
-from perovskite_data_analysis.oqmd.perovskite_data import PerovskiteDataHandler
+from perovskite_data_analysis.oqmd.enrich import process_enrich_phases, process_enrich_structures
 
 
 class PerovskiteLoader:
-    DIR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../data"))
+    DIR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../data/raw"))
 
     def __init__(self, configuration: Configuration):
         self.data_handler = configuration.handler
@@ -17,7 +15,8 @@ class PerovskiteLoader:
     def run(self):
         self.process_phases()
         self.process_structures()
-        self.merge_loaded_data()
+        process_enrich_phases()
+        process_enrich_structures()
 
     def process_phases(self):
         filepath = f'{self.DIR_PATH}/phases.parquet'

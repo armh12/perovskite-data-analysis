@@ -45,8 +45,7 @@ class AsyncClient(BaseClient):
         self.timeout = httpx.Timeout(timeout=timeout,
                                      read=read_timeout,
                                      write=write_timeout,
-                                     connect=connect_timeout,
-                                     )
+                                     connect=connect_timeout,)
         self.__async_client = httpx.AsyncClient(timeout=timeout)
 
     async def get(self, url: str, params: dict | None, headers: dict | None = None) -> httpx.Response:

@@ -181,9 +181,3 @@ class OQMDClient(OQMDAbstractClient):
                                   fields=fields,
                                   filters=filters,
                                   max_pages=max_pages,)
-
-
-if __name__ == "__main__":
-    client = OQMDClient()
-    resp = client.get_phases(filters={"generic": "ABC3"})
-    print(resp)
