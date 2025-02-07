@@ -1,10 +1,12 @@
 import ast
 import math
+import numpy as np
 import pandas as pd
 from pymatgen.core import Composition
 from pymatgen.core.lattice import Lattice
 from pymatgen.core.molecular_orbitals import MolecularOrbitals
 from pymatgen.core.periodic_table import Element
+from warnings import deprecated
 
 from perovskite_data_analysis.common.entities import AM3_TO_SM3, AMU_TO_GRAM
 
@@ -23,6 +25,7 @@ def parse_formula(formula: str) -> pd.Series | None:
         return None
 
 
+@deprecated("Incorrect parsing")
 def classify_material(formula: str) -> str | None:
     """
     Classify a material as 'organic', 'inorganic', or 'semi-organic' based on its formula.
@@ -46,28 +49,37 @@ def classify_material(formula: str) -> str | None:
         """
     try:
         comp = Composition(formula)
-        elements = [str(el) for el in comp.elements]
-
-        metals = []
-        for el in elements:
-            try:
-                if Element(el).is_metal:
-                    metals.append(el)
-            except Exception:
-                pass
-
-        contains_carbon = "C" in elements
-        contains_hydrogen = "H" in elements
-
-        if contains_carbon and contains_hydrogen:
-            if metals:
-                return "semi-organic"
-            else:
-                return "organic"
-        else:
-            return "inorganic"
-    except Exception:
+    except Exception as e:
         return None
+
+    element_symbols = [sp.symbol for sp in comp.elements]
+
+    organic_markers = False
+    if "C" in element_symbols and "H" in element_symbols:
+        organic_markers = True
+    else:
+        known_organic_abbrevs = ["MA", "FA", "DMA", "EA", "PEA", "TBA", "iPA"]
+        for abbr in known_organic_abbrevs:
+            if abbr in formula:
+                organic_markers = True
+                break
+
+    metals = []
+    for sp in comp.elements:
+        try:
+            el = Element(sp.symbol)
+            if el.is_metal:
+                metals.append(el)
+        except Exception:
+            continue
+
+    if organic_markers:
+        if metals:
+            return "semi-organic"
+        else:
+            return "organic"
+    else:
+        return "inorganic"
 
 
 def get_composition_features(structures_df: pd.DataFrame) -> pd.DataFrame:
@@ -82,10 +94,7 @@ def get_composition_features(structures_df: pd.DataFrame) -> pd.DataFrame:
             })
             return scalar_series
         except Exception:
-            return pd.Series({
-                "weight": None,
-                "avg_elec_negativity": None
-            })
+            return pd.Series()
 
     parsed_df = structures_df["chemical_formula_reduced"].apply(__parse_composition)
     df = pd.concat([structures_df, parsed_df], axis=1)
@@ -99,32 +108,36 @@ def decompose_sites(phases_df: pd.DataFrame) -> pd.DataFrame:
         return element, x, y, z
 
     def __process_sites(row: pd.Series):
-        sites_list = row.sites
-        elements = row.__elements
-        if isinstance(sites_list, str):
-            try:
-                sites_list = ast.literal_eval(sites_list)
-            except:
-                sites_list = []
+        try:
+            sites_list = row.sites
+            elements = row.__elements
+            if isinstance(sites_list, str):
+                try:
+                    sites_list = ast.literal_eval(sites_list)
+                except:
+                    sites_list = []
 
-        site_dict = {}
-        if len(sites_list) == 0:
-            return None
-        for site in sites_list:
-            element, x, y, z = __parse_site(site)
-            idx = elements.index(element.strip())
-            if idx == 0:
-                prefix = 'A'
-            elif idx == 1:
-                prefix = 'B'
-            else:
-                prefix = "X"
-            site_dict[f'{prefix}_x'] = x
-            site_dict[f'{prefix}_y'] = y
-            site_dict[f'{prefix}_z'] = z
+            site_dict = {}
+            if len(sites_list) == 0:
+                return pd.Series
+            for site in sites_list:
+                element, x, y, z = __parse_site(site)
+                idx = elements.index(element.strip())
+                if idx == 0:
+                    prefix = 'A'
+                elif idx == 1:
+                    prefix = 'B'
+                else:
+                    prefix = "X"
+                site_dict[f'{prefix}_x'] = x
+                site_dict[f'{prefix}_y'] = y
+                site_dict[f'{prefix}_z'] = z
 
-        return pd.Series(site_dict)
+            return pd.Series(site_dict)
+        except Exception:
+            return pd.Series()
 
+    phases_df = phases_df[~phases_df["_composition"].isna()]
     phases_df["__elements"] = phases_df["_composition"].apply(lambda x: list(x.keys()))
     sites_expanded = phases_df[["sites", "__elements"]].apply(__process_sites, axis=1)
 
@@ -135,16 +148,19 @@ def decompose_sites(phases_df: pd.DataFrame) -> pd.DataFrame:
 
 def split_element_names(phases_df: pd.DataFrame):
     def __parse_composition(composition_dict: dict):
-        element_dict = {}
-        for idx, (element_name, element_count) in enumerate(composition_dict.items()):
-            if idx == 0:
-                prefix = "A"
-            elif idx == 1:
-                prefix = "B"
-            else:
-                prefix = "X"
-            element_dict[f'{prefix}_element'] = element_name
-            element_dict[f'{prefix}_count'] = element_count
+        try:
+            element_dict = {}
+            for idx, (element_name, element_count) in enumerate(composition_dict.items()):
+                if idx == 0:
+                    prefix = "A"
+                elif idx == 1:
+                    prefix = "B"
+                else:
+                    prefix = "X"
+                element_dict[f'{prefix}_element'] = element_name
+                element_dict[f'{prefix}_count'] = element_count
+        except Exception:
+            return pd.Series()
         return pd.Series(element_dict)
 
     parsed = phases_df["_composition"].apply(__parse_composition)
@@ -153,17 +169,21 @@ def split_element_names(phases_df: pd.DataFrame):
 
 
 def parse_lattice_vectors(structures_df: pd.DataFrame) -> pd.DataFrame:
-    def __parse_unit_cell(unit_cell: list[list]) -> pd.Series:
-        lattice = Lattice(unit_cell)
-        lattice_dict = {
-            "a": lattice.a,
-            "b": lattice.b,
-            "c": lattice.c,
-            "alpha": lattice.alpha,
-            "beta": lattice.beta,
-            "gamma": lattice.gamma,
-        }
-        return pd.Series(lattice_dict)
+    def __parse_unit_cell(unit_cell: np.ndarray) -> pd.Series:
+        try:
+            matrix = unit_cell.tolist()
+            lattice = Lattice(matrix)
+            lattice_dict = {
+                "a": lattice.a,
+                "b": lattice.b,
+                "c": lattice.c,
+                "alpha": lattice.alpha,
+                "beta": lattice.beta,
+                "gamma": lattice.gamma,
+            }
+            return pd.Series(lattice_dict)
+        except Exception:
+            return pd.Series()
 
     unit_cell_parsed = structures_df["lattice_vectors"].apply(__parse_unit_cell)
     structures_df = pd.concat([structures_df, unit_cell_parsed], axis=1)

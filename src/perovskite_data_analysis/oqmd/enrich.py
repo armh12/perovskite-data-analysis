@@ -9,6 +9,8 @@ from perovskite_data_analysis.common.data_features import parse_formula, decompo
 
 RAW_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../data/raw"))
 ENRICHED_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../data/enrich"))
+if not os.path.exists(ENRICHED_PATH):
+    os.makedirs(ENRICHED_PATH)
 
 
 def process_enrich_phases():
@@ -18,10 +20,10 @@ def process_enrich_phases():
     df = decompose_sites(df)
     df = split_element_names(df)
     df = add_tolerance_factor(df)
-    df["classification"] = df["name"].apply(classify_material)
+    # df["classification"] = df["name"].apply(classify_material)
     df.drop(columns=["_composition"], inplace=True)
     df.rename(columns={"delta_e": "e_hull", "entry_id": "id"}, inplace=True)
-    df.to_parquet(os.path.join(ENRICHED_PATH, "phases.parquet"))
+    df.to_parquet(os.path.join(ENRICHED_PATH, "phases.parquet"), index=False)
 
 
 def process_enrich_structures():
@@ -33,4 +35,4 @@ def process_enrich_structures():
     df = get_composition_features(df)
     df.rename(columns={"_oqmd_entry_id": "id"}, inplace=True)
     df.drop(columns=["_composition", "species_at_sites"], inplace=True)
-    df.to_parquet(os.path.join(ENRICHED_PATH, "structures.parquet"))
+    df.to_parquet(os.path.join(ENRICHED_PATH, "structures.parquet"), index=False)

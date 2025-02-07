@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 from perovskite_data_analysis.common.data_features import decompose_sites, split_element_names, \
-    get_composition_features, classify_material, add_tolerance_factor, parse_formula
+    get_composition_features, classify_material, add_tolerance_factor, parse_formula, parse_lattice_vectors
 
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
@@ -46,3 +46,8 @@ def test_add_tolerance_factor(df_phases):
     df_phases = add_tolerance_factor(df_phases)
     assert "tolerance_factor" in df_phases.columns
     assert df_phases["tolerance_factor"].dtype == np.float64
+
+
+def test_parse_lattice_vectors(df_structures):
+    df_structures = parse_lattice_vectors(df_structures)
+    print(df_structures)

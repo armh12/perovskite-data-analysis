@@ -135,7 +135,7 @@ class OQMDAbstractClient(ABC):
         return self._get_all_data(url=url,
                                   params=params,
                                   max_pages=max_pages,
-                                  data_field_name="results")
+                                  data_field_name="data")
 
     @staticmethod
     def __get_paginator(pagination_offset: int, pagination_limit: int, max_pages: int) -> Paginator:
