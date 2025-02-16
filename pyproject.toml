@@ -9,13 +9,16 @@ python = "^3.13"
 python-dotenv = "^1.0.0"
 pymatgen = "2024.10.3"
 pandas = "^2.2.3"
-numpy = "^2.2.1"
+numpy = "1.26.4"
 matplotlib = "3.10.0"
 seaborn = "0.13.2"
 scikit-learn = "1.6.1"
 scipy = "^1.7.3"
 pyarrow = "^18.1.0"
 httpx = "^0.28.1"
+
+# Materials project
+mp_api = "*"
 
 
 [tool.poetry.dev-dependencies]
