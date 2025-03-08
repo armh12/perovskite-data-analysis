@@ -1,5 +1,3 @@
-import pytest
-
 from tests.assertions import assert_valid_oqmd_phases, assert_valid_oqmd_phases_with_set_fields, assert_valid_oqmd_calculation,\
     assert_valid_oqmd_calculation_with_set_fields, assert_valid_oqmd_structures, assert_valid_oqmd_structures_with_set_fields
 

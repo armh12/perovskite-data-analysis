@@ -1,7 +1,7 @@
 import pandas as pd
 
 from perovskite_data_analysis.common.data_features import filter_valid_perovkiste_by_name
-from perovskite_data_analysis.oqmd.client import OQMDClient
+from perovskite_data_analysis.oqmd_etl.client import OQMDClient
 
 
 class PerovskiteDataHandler:

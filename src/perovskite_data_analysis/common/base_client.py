@@ -4,7 +4,7 @@ import httpx
 
 class BaseClient(ABC):
     @abstractmethod
-    def get(self, url: str, params: dict | None, headers: dict | None = None) -> httpx.Response:
+    def get(self, url: str, params: dict | None = None, headers: dict | None = None) -> httpx.Response:
         pass
 
     @abstractmethod
@@ -25,7 +25,7 @@ class Client(BaseClient):
                                      )
         self.__client = httpx.Client(timeout=timeout)
 
-    def get(self, url: str, params: dict | None, headers: dict | None = None) -> httpx.Response:
+    def get(self, url: str, params: dict | None = None, headers: dict | None = None) -> httpx.Response:
         response = self.__client.get(url, params=params, headers=headers)
         response.raise_for_status()
         return response

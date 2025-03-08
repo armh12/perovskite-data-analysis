@@ -1,8 +1,8 @@
 import logging
 from dataclasses import dataclass
 
-from perovskite_data_analysis.oqmd.client import OQMDClient
-from perovskite_data_analysis.oqmd.perovskite_data import PerovskiteDataHandler
+from perovskite_data_analysis.oqmd_etl.client import OQMDClient
+from perovskite_data_analysis.oqmd_etl.perovskite_data import PerovskiteDataHandler
 
 
 @dataclass

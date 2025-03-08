@@ -1,8 +1,8 @@
 import os
 import pandas as pd
 
-from perovskite_data_analysis.oqmd.configuration import Configuration, build_configuration
-from perovskite_data_analysis.oqmd.enrich import process_enrich_phases, process_enrich_structures
+from perovskite_data_analysis.oqmd_etl.configuration import Configuration, build_configuration
+from perovskite_data_analysis.oqmd_etl.enrich import process_enrich_phases, process_enrich_structures
 
 
 class PerovskiteLoader:

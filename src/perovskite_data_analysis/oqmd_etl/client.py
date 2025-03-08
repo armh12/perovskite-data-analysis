@@ -5,7 +5,7 @@ import httpx
 import time
 
 from perovskite_data_analysis.common.base_client import Client
-from perovskite_data_analysis.oqmd.paginator import Paginator
+from perovskite_data_analysis.oqmd_etl.paginator import Paginator
 
 RETRY_DELAY_SEC = 15
 RETRY_COUNT = 10
