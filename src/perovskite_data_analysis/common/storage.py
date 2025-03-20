@@ -3,7 +3,7 @@ import os
 import pandas as pd
 from abc import abstractmethod, ABC
 from google.oauth2.service_account import Credentials
-from googleapiclient.discovery import build
+from googleapiclient.discovery import build, Resource
 from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload, MediaIoBaseUpload
 
 
@@ -71,13 +71,15 @@ class GoogleDriveStorage(FileStorage):
         file_format = ext
 
         if file_format == 'csv':
-            df = pd.read_csv(io.BytesIO(file_bytes))
+            df = pd.read_csv(io.BytesIO(file_bytes), low_memory=False)
         elif file_format in ['xlsx', 'xls']:
             df = pd.read_excel(io.BytesIO(file_bytes))
         elif file_format == 'parquet':
             df = pd.read_parquet(io.BytesIO(file_bytes))
+        elif file_format == 'pkl':
+            df = pd.read_pickle(io.BytesIO(file_bytes))
         else:
-            raise ValueError("Unsupported file format. Use 'csv', 'xlsx', or 'parquet'.")
+            raise ValueError("Unsupported file format. Use 'csv', 'xlsx', 'parquet' or 'pkl.")
         return df
 
     # noinspection PyTypeChecker
@@ -112,10 +114,13 @@ class GoogleDriveStorage(FileStorage):
         return file.get('id')
 
     def _get_file_id_by_path(self, filepath: str) -> str | None:
-        # parts = filepath.strip('/').split('/')
-        # parent_id = 'root'
-        # for folder in parts[:-1]:
-        #     folder_content =
-        # TODO implement file id retirement by depth to folders CHECK if is single file
-        raise NotImplementedError()
-
+        filename = os.path.basename(filepath)
+        file_id = self._service.files().list(
+            q=f'name="{filename}"',
+            spaces='drive',
+            fields='files(id, name)',
+        ).execute()
+        files = file_id.get('files', [])
+        if len(files) == 0:
+            return None
+        return files[0].get('id')
