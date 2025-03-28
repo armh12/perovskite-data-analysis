@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from perovskite_data_analysis.common.data_features import decompose_sites, split_element_names, \
+from perovskite_data_analysis.features.complex import decompose_sites, split_element_names, \
     get_composition_features, classify_material, add_tolerance_factor, parse_formula, parse_lattice_vectors
 
 pd.set_option('display.max_rows', 500)
