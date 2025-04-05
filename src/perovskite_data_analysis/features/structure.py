@@ -3,7 +3,7 @@ from typing import Dict, Tuple
 import numpy as np
 
 from perovskite_data_analysis.entities.elements import Elements
-from perovskite_data_analysis.entities.structure import SpaceGroup
+from perovskite_data_analysis.entities.space_group import SpaceGroup
 
 
 def compute_effective_radii(composition: Dict[str, Dict[str, float]]) -> Tuple[float, float, float] | None:
