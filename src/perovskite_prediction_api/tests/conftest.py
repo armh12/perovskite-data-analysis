@@ -3,11 +3,11 @@ import os
 import pandas as pd
 from google.oauth2.credentials import Credentials
 
-from perovskite_data_analysis.common.credentials import google_credentials
-from perovskite_data_analysis.common.storage import GoogleDriveStorage
-from perovskite_data_analysis.oqmd_etl.client import OQMDClient
-from perovskite_data_analysis.oqmd_etl.configuration import build_configuration
-from perovskite_data_analysis.oqmd_etl.perovskite_data import PerovskiteDataHandler
+from perovskite_prediction_api.common.credentials import google_credentials
+from perovskite_prediction_api.common.storage import GoogleDriveStorage
+from perovskite_prediction_api.oqmd_etl.client import OQMDClient
+from perovskite_prediction_api.oqmd_etl.configuration import build_configuration
+from perovskite_prediction_api.oqmd_etl.perovskite_data import PerovskiteDataHandler
 
 TEST_DATA_PATH = os.path.normpath(os.path.join(os.path.dirname(__file__), "test_data"))
 

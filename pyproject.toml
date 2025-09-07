@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "perovskite-data-analysis"
+name = "perovskite_prediction_api"
 version = "0.0.2"
 authors = ["Arman Hovhannisyan <hovhannisyanarman062@gmail.com>"]
 description = "Perovskite analysis with ML"
@@ -7,7 +7,6 @@ description = "Perovskite analysis with ML"
 [tool.poetry.dependencies]
 python = "^3.13"
 python-dotenv = "^1.0.0"
-pymatgen = "2024.10.3"
 pandas = "^2.2.3"
 numpy = "1.26.4"
 matplotlib = "3.10.0"
@@ -21,6 +20,8 @@ google-auth-httplib2 = "0.2.0"
 google-auth-oauthlib = "1.2.1"
 openpyxl = "3.1.5"
 xgboost = "^2.1.4"
+fastapi = "0.115.12"
+gunicorn = "23.0.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.3.4"

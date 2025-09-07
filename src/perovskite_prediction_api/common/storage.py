@@ -3,7 +3,7 @@ import os
 import pandas as pd
 from abc import abstractmethod, ABC
 from google.oauth2.service_account import Credentials
-from googleapiclient.discovery import build, Resource
+from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload, MediaIoBaseUpload
 
 

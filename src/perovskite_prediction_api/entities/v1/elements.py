@@ -68,7 +68,6 @@ class Elements(enum.Enum):
         raise ValueError(f"No element found with name '{name}'")
 
     # A-Site Ions
-    # A-Site Ions
     MA = ("MA", 2.17, 2.5, 1, 32.06, False, 1)
     FA = ("FA", 2.53, 2.5, 1, 45.06, False, 2)
     CS = ("Cs", 1.67, 0.79, 1, 132.91, False, 3)

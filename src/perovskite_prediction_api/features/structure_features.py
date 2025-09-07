@@ -1,9 +1,10 @@
 from typing import Dict, Tuple
 
 import numpy as np
+import pandas as pd
 
-from perovskite_data_analysis.entities.elements import Elements
-from perovskite_data_analysis.entities.space_group import SpaceGroup
+from perovskite_prediction_api.entities.v1.elements import Elements
+from perovskite_prediction_api.entities.v1.structure import SpaceGroup, Dimensions, Sites
 
 
 def compute_effective_radii(composition: Dict[str, Dict[str, float]]) -> Tuple[float, float, float] | None:
@@ -15,18 +16,18 @@ def compute_effective_radii(composition: Dict[str, Dict[str, float]]) -> Tuple[f
     try:
         r_A_eff = 0.0
         r_C_eff = 0.0
-        for elem_name, coeff in composition['A'].items():
+        for elem_name, coeff in composition[Sites.A.value].items():
             element = Elements.get_element_by_name(elem_name)
             r_A_eff += coeff * element.ionic_radii
-        for elem_name, coeff in composition['C'].items():
+        for elem_name, coeff in composition[Sites.C.value].items():
             element = Elements.get_element_by_name(elem_name)
             r_C_eff += (coeff / 3.0) * element.ionic_radii  # Normalize by total C-site stoichiometry (3)
         r_B = sum(
             coeff * Elements.get_element_by_name(elem_name).ionic_radii for elem_name, coeff in
             composition['B'].items())
         return r_A_eff, r_B, r_C_eff
-    except ValueError:
-        return None
+    except ValueError as exc:
+        raise exc
 
 
 def compute_dimensionality_indicator(r_A_eff: float) -> int:
@@ -38,7 +39,7 @@ def compute_dimensionality_indicator(r_A_eff: float) -> int:
     return 1 if r_A_eff > 3.0 else 0
 
 
-def predict_space_group(tolerance_factor: float, is_2d: int) -> str:
+def get_space_group(tolerance_factor: float, is_2d: int) -> str:
     """
     Predict the space group of a perovskite based on tolerance factor and dimensionality.
     Args:
@@ -48,14 +49,14 @@ def predict_space_group(tolerance_factor: float, is_2d: int) -> str:
         str: Predicted space group.
     """
     if is_2d:
-        return SpaceGroup.RUDDLESDEN_POPEN.value
+        return SpaceGroup.RUDDLESDEN_POPEN.value[0]
     else:
         if tolerance_factor > 0.9:
-            return SpaceGroup.CUBIC.value
+            return SpaceGroup.CUBIC.value[0]
         elif 0.8 < tolerance_factor <= 0.9:
-            return SpaceGroup.TETRAGONAL.value
+            return SpaceGroup.TETRAGONAL.value[0]
         else:
-            return SpaceGroup.ORTHOROMBIC.value
+            return SpaceGroup.ORTHOROMBIC.value[0]
 
 
 def compute_ionic_radius_ratios(r_A_eff: float, r_B: float, r_X_eff: float) -> Tuple[float, float]:
@@ -130,3 +131,82 @@ def compute_shannon_entropy(composition: Dict[str, Dict[str, float]], site: str)
         if x_i > 0:
             entropy -= x_i * np.log(x_i)
     return entropy
+
+
+def compute_space_group(tolerance_factor: float, dimension: float, is_inorganic: bool) -> str | pd.NA:
+    if pd.isna(tolerance_factor):
+        return pd.NA
+
+    # 3D Perovskites
+    if dimension == Dimensions.THREE_DIM.value:
+        if 0.9 <= tolerance_factor <= 1.0:
+            return SpaceGroup.CUBIC.value  # Cubic
+        elif 0.8 <= tolerance_factor < 0.9:
+            return SpaceGroup.ORTHOROMBIC.value if is_inorganic else SpaceGroup.TETRAGONAL.value  # Orthorhombic or tetragonal
+        elif tolerance_factor < 0.8:
+            return SpaceGroup.ORTHOROMBIC.value  # Orthorhombic
+        else:  # t > 1.0
+            return SpaceGroup.HEXAGONAL.value  # Hexagonal
+
+    # 2D Perovskites
+    elif dimension == Dimensions.TWO_DIM.value:
+        return SpaceGroup.RUDDLESDEN_POPEN.value  # Layered structure
+
+    # 2D3D Mixture
+    elif dimension == Dimensions.TWO_THREE_DIM_MIXTURE.value:
+        return SpaceGroup.RUDDLESDEN_POPEN.value if tolerance_factor < 0.9 else SpaceGroup.ORTHOROMBIC.value
+    # 0D Perovskites
+    elif dimension == Dimensions.ZERO_DIM.value:
+        return 'Unknown'  # Often molecular, not well-defined
+
+
+def create_composition_dict(row: pd.Series) -> dict[str, dict[str, float]]:
+    """
+    Used for easy access for feature calc in dataframe.Service and helper function.
+    """
+    composition = {Sites.A.value: {}, Sites.B.value: {}, Sites.C.value: {}}
+
+    expected_totals = {Sites.A.value: 1.0, Sites.B.value: 1.0, Sites.C.value: 3.0}
+    max_slots = {Sites.A.value: 5, Sites.B.value: 3, Sites.C.value: 4}
+
+    for ion_prefix in [Sites.A.value, Sites.B.value, Sites.C.value]:
+        site_dict = {}
+        for num in range(1, max_slots[ion_prefix] + 1):
+            elem_key = f"{ion_prefix}_{num}"
+            coef_key = f"{ion_prefix}_{num}_coef"
+
+            if elem_key not in row:
+                continue
+
+            elem = row[elem_key]
+            coef = row[coef_key] if coef_key in row else -1
+
+            if elem == -1 or elem == "-1":
+                continue
+            if isinstance(elem, str) and ("|" in elem or elem.strip() == ""):
+                continue
+
+            if isinstance(elem, str):
+                elem = elem.replace('(', '').replace(')', '').strip()
+
+            site_dict[elem] = coef
+        try:
+            site_dict = {k: float(v) for k, v in site_dict.items() if v != 0}
+        except ValueError:
+            return pd.NA
+
+        if not site_dict:
+            return pd.NA
+
+        if any(coef == -1 for coef in site_dict.values()):
+            num_ions = len(site_dict)
+            inferred_coef = expected_totals[ion_prefix] / num_ions
+            site_dict = {ion: inferred_coef for ion in site_dict}
+        else:
+            total_coef = sum(site_dict.values())
+            if total_coef > 0:
+                scaling_factor = expected_totals[ion_prefix] / total_coef
+                site_dict = {ion: coef * scaling_factor for ion, coef in site_dict.items()}
+        composition[ion_prefix] = site_dict
+
+    return composition
