@@ -12,7 +12,7 @@ def compute_tolerance_factor(r_A_eff: float, r_B: float, r_C_eff: float) -> floa
     return (r_A_eff + r_C_eff) / (np.sqrt(2) * (r_B + r_C_eff))
 
 
-def compute_octahedral_factor(r_B: float, r_X_eff: float) -> float:
+def compute_octahedral_factor(r_B: float, r_C_eff: float) -> float:
     """
     Compute the octahedral factor for the perovskite.
     Args:
@@ -21,6 +21,6 @@ def compute_octahedral_factor(r_B: float, r_X_eff: float) -> float:
     Returns:
         float: Octahedral factor.
     """
-    if r_X_eff == 0:
+    if r_C_eff == 0:
         return float('inf')
-    return r_B / r_X_eff
+    return r_B / r_C_eff

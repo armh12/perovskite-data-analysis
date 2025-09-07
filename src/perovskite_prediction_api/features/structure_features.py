@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from perovskite_prediction_api.entities.v1.elements import Elements
-from perovskite_prediction_api.entities.v1.structure import SpaceGroup, Dimensions, Sites
+from perovskite_prediction_api.entities.v1.structure import SpaceGroup, Dimensions, Site
 
 
 def compute_effective_radii(composition: Dict[str, Dict[str, float]]) -> Tuple[float, float, float] | None:
@@ -16,10 +16,10 @@ def compute_effective_radii(composition: Dict[str, Dict[str, float]]) -> Tuple[f
     try:
         r_A_eff = 0.0
         r_C_eff = 0.0
-        for elem_name, coeff in composition[Sites.A.value].items():
+        for elem_name, coeff in composition[Site.A.value].items():
             element = Elements.get_element_by_name(elem_name)
             r_A_eff += coeff * element.ionic_radii
-        for elem_name, coeff in composition[Sites.C.value].items():
+        for elem_name, coeff in composition[Site.C.value].items():
             element = Elements.get_element_by_name(elem_name)
             r_C_eff += (coeff / 3.0) * element.ionic_radii  # Normalize by total C-site stoichiometry (3)
         r_B = sum(
@@ -39,16 +39,16 @@ def compute_dimensionality_indicator(r_A_eff: float) -> int:
     return 1 if r_A_eff > 3.0 else 0
 
 
-def get_space_group(tolerance_factor: float, is_2d: int) -> str:
+def get_space_group(tolerance_factor: float, dimension: str) -> str:
     """
     Predict the space group of a perovskite based on tolerance factor and dimensionality.
     Args:
         tolerance_factor (float): Tolerance factor (t).
-        is_2d (float): Is perovskite 2D
+        dimension (str): Perovskite dimensionality (d).
     Returns:
-        str: Predicted space group.
+        str: Calculated space group.
     """
-    if is_2d:
+    if dimension == Dimensions.TWO_DIM.value:
         return SpaceGroup.RUDDLESDEN_POPEN.value[0]
     else:
         if tolerance_factor > 0.9:
@@ -59,21 +59,21 @@ def get_space_group(tolerance_factor: float, is_2d: int) -> str:
             return SpaceGroup.ORTHOROMBIC.value[0]
 
 
-def compute_ionic_radius_ratios(r_A_eff: float, r_B: float, r_X_eff: float) -> Tuple[float, float]:
+def compute_ionic_radius_ratios(r_A_eff: float, r_B: float, r_C_eff: float) -> Tuple[float, float]:
     """
     Compute additional ionic radius ratios.
 
     Args:
         r_A_eff (float): Effective A-site radius.
         r_B (float): B-site radius.
-        r_X_eff (float): Effective X-site radius.
+        r_C_eff (float): Effective C-site radius.
 
     Returns:
-        Tuple[float, float]: (r_A_eff/r_X_eff, r_B/r_A_eff)
+        Tuple[float, float]: (r_A_eff/r_C_eff, r_B/r_A_eff)
     """
-    r_A_to_X = r_A_eff / r_X_eff if r_X_eff != 0 else float('inf')
+    r_A_to_C = r_A_eff / r_C_eff if r_C_eff != 0 else float('inf')
     r_B_to_A = r_B / r_A_eff if r_A_eff != 0 else float('inf')
-    return r_A_to_X, r_B_to_A
+    return r_A_to_C, r_B_to_A
 
 
 def compute_centrosymmetry_indicator(space_group: str) -> int:
@@ -99,10 +99,10 @@ def compute_hydrophobicity_indicator(composition: Dict[str, Dict[str, float]]) -
 
 def compute_effective_polarizability(composition: Dict[str, Dict[str, float]], site: str) -> float:
     """
-    Compute the effective polarizability for a given site (A, B, or X).
+    Compute the effective polarizability for a given site (A, B, or C).
     Args:
         composition (Dict[str, Dict[str, float]]): Perovskite composition.
-        site (str): Site to compute polarizability for ('A', 'B', or 'X').
+        site (str): Site to compute polarizability for ('A', 'B', or 'C').
     Returns:
         float: Effective polarizability.
     """
@@ -111,7 +111,7 @@ def compute_effective_polarizability(composition: Dict[str, Dict[str, float]], s
         element = Elements.get_element_by_name(elem_name)
         r = element.ionic_radii
         m = element.atomic_mass
-        weight = coeff if site in ['A', 'B'] else coeff / 3.0
+        weight = coeff if site in [Site.A.value, Site.B.value] else coeff / 3.0
         polarizability += weight * (r ** 3 / m if m != 0 else 0)
     return polarizability
 
@@ -121,19 +121,19 @@ def compute_shannon_entropy(composition: Dict[str, Dict[str, float]], site: str)
     Compute the Shannon entropy of the composition for a given site.
     Args:
         composition (Dict[str, Dict[str, float]]): Perovskite composition.
-        site (str): Site to compute entropy for ('A' or 'X').
+        site (str): Site to compute entropy for ('A' or 'C').
     Returns:
         float: Shannon entropy.
     """
     entropy = 0.0
     for elem_name, coeff in composition[site].items():
-        x_i = coeff if site == 'A' else coeff / 3.0
+        x_i = coeff if site == Site.A.value else coeff / 3.0
         if x_i > 0:
             entropy -= x_i * np.log(x_i)
     return entropy
 
 
-def compute_space_group(tolerance_factor: float, dimension: float, is_inorganic: bool) -> str | pd.NA:
+def compute_space_group(tolerance_factor: float, dimension: float, is_inorganic: bool) -> str | None:
     if pd.isna(tolerance_factor):
         return pd.NA
 
@@ -164,12 +164,12 @@ def create_composition_dict(row: pd.Series) -> dict[str, dict[str, float]]:
     """
     Used for easy access for feature calc in dataframe.Service and helper function.
     """
-    composition = {Sites.A.value: {}, Sites.B.value: {}, Sites.C.value: {}}
+    composition = {Site.A.value: {}, Site.B.value: {}, Site.C.value: {}}
 
-    expected_totals = {Sites.A.value: 1.0, Sites.B.value: 1.0, Sites.C.value: 3.0}
-    max_slots = {Sites.A.value: 5, Sites.B.value: 3, Sites.C.value: 4}
+    expected_totals = {Site.A.value: 1.0, Site.B.value: 1.0, Site.C.value: 3.0}
+    max_slots = {Site.A.value: 5, Site.B.value: 3, Site.C.value: 4}
 
-    for ion_prefix in [Sites.A.value, Sites.B.value, Sites.C.value]:
+    for ion_prefix in [Site.A.value, Site.B.value, Site.C.value]:
         site_dict = {}
         for num in range(1, max_slots[ion_prefix] + 1):
             elem_key = f"{ion_prefix}_{num}"
@@ -179,9 +179,9 @@ def create_composition_dict(row: pd.Series) -> dict[str, dict[str, float]]:
                 continue
 
             elem = row[elem_key]
-            coef = row[coef_key] if coef_key in row else -1
+            coef = row[coef_key] if coef_key in row else 0
 
-            if elem == -1 or elem == "-1":
+            if elem == 0 or elem == "0":
                 continue
             if isinstance(elem, str) and ("|" in elem or elem.strip() == ""):
                 continue
