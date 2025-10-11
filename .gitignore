@@ -1,2 +1,5 @@
 poetry.lock
 .idea/
+google_credentials.json
+**/.env
+**/.DS_Store

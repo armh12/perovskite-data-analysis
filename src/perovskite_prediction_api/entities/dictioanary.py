@@ -1,6 +1,7 @@
 import enum
 
 
+@enum.unique
 class Elements(enum.Enum):
     def __new__(cls, *value: tuple):
         obj = object.__new__(cls)
@@ -120,3 +121,135 @@ class Elements(enum.Enum):
     BR = ("Br", 1.96, 2.96, -1, 79.90, False, 46)
     CL = ("Cl", 1.81, 3.16, -1, 35.45, False, 47)
     I = ("I", 2.20, 2.66, -1, 126.90, False, 48)
+
+
+@enum.unique
+class Layers(enum.Enum):
+    """
+    Layers used in perovskite solar cells.
+    """
+
+    @property
+    def layer_name(self):
+        return self.value[0]
+
+    @property
+    def code(self):
+        return self.value[1]
+
+    @classmethod
+    def get_code_by_name(cls, name):
+        for member in cls:
+            if member.value[0] == name:
+                return member.value[1]
+        raise KeyError(f"Layer name '{name}' not found")
+
+    SLG = "SLG", 1
+    FTO = "FTO", 2
+    ITO = "ITO", 3
+    TIO2_C = "TiO2-c", 4
+    SNO2_NP = "SnO2-np", 5
+    TIO2_MP = "TiO2-mp", 6
+    PEROVSKITE = "Perovskite", 7
+    SPIRO_MEOTAD = "Spiro-MeOTAD", 8
+    AU = "Au", 9
+    AG = "Ag", 10
+
+
+@enum.unique
+class BaseStructureDictionary(enum.Enum):
+    @property
+    def code(self):
+        return self.value[1]
+
+    @classmethod
+    def get_code_by_name(cls, name):
+        """
+        Get the code (value[1]) by spacegroup name (value[0]).
+        Raises KeyError if name not found.
+        """
+        for member in cls:
+            if member.value[0] == name:
+                return member.value[1]
+        raise KeyError(f"Name '{name}' not found")
+
+
+@enum.unique
+class Site(enum.Enum):
+    """
+    Perovskite sites
+    """
+    A = "A"
+    B = "B"
+    C = "C"
+
+
+@enum.unique
+class CellArchitecture(BaseStructureDictionary):
+    """
+    Cell architecture
+    """
+
+    NIP = "nip", 1
+    PIN = "pin", 2
+
+
+@enum.unique
+class BackContact(BaseStructureDictionary):
+    """
+    Back contact stacks
+    """
+
+    Au = "Au", 1
+    Ag = "Ag", 2
+
+
+@enum.unique
+class SpaceGroup(BaseStructureDictionary):
+    """
+    Spacegroups of perovskite materials.
+    """
+
+    @property
+    def spacegroup(self):
+        return self.value[0]
+
+    RUDDLESDEN_POPEN = "I4/mmm", 1
+    CUBIC = "Pm3m", 2
+    TETRAGONAL = "I4/mcm", 3
+    ORTHOROMBIC = "Pnma", 4
+    HEXAGONAL = 'P6/mmc', 5
+
+
+class Dimensions(BaseStructureDictionary):
+    """
+    Dimensions of perovskite materials.
+    """
+
+    @property
+    def dimension(self):
+        return self.value[0]
+
+    ZERO_DIM = "0D", 0
+    TWO_DIM = "2D", 1
+    THREE_DIM = "3D", 2
+    TWO_THREE_DIM_MIXTURE = "2D3D_mixture", 3
+
+
+@enum.unique
+class ETLStacks(BaseStructureDictionary):
+    """
+    ETL Stacks
+    """
+
+    @property
+    def stack(self):
+        return self.value[0]
+
+    TWO_TI_O2_c_mp = "TiO2-c | TiO2-mp", 1
+    TI_O2_c = "TiO2-c", 2
+    PCBM_60 = "PCBM-60", 3
+    PCBM_60_BCP = "PCBM-60 | BCP", 4
+    SN_O2_np = "SnO2-np", 5
+    SN_O2_c = "SnO2-c", 6
+    C60_BCP = "C60 | BCP", 7
