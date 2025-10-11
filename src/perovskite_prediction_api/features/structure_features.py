@@ -3,7 +3,7 @@ from typing import Dict, Tuple
 import numpy as np
 import pandas as pd
 
-from perovskite_prediction_api.entities.v1.elements import Elements
+from perovskite_prediction_api.entities.v1.Element import Element
 from perovskite_prediction_api.entities.v1.structure import SpaceGroup, Dimensions, Site
 
 
@@ -17,13 +17,13 @@ def compute_effective_radii(composition: Dict[str, Dict[str, float]]) -> Tuple[f
         r_A_eff = 0.0
         r_C_eff = 0.0
         for elem_name, coeff in composition[Site.A.value].items():
-            element = Elements.get_element_by_name(elem_name)
+            element = Element.get_element_by_name(elem_name)
             r_A_eff += coeff * element.ionic_radii
         for elem_name, coeff in composition[Site.C.value].items():
-            element = Elements.get_element_by_name(elem_name)
+            element = Element.get_element_by_name(elem_name)
             r_C_eff += (coeff / 3.0) * element.ionic_radii  # Normalize by total C-site stoichiometry (3)
         r_B = sum(
-            coeff * Elements.get_element_by_name(elem_name).ionic_radii for elem_name, coeff in
+            coeff * Element.get_element_by_name(elem_name).ionic_radii for elem_name, coeff in
             composition['B'].items())
         return r_A_eff, r_B, r_C_eff
     except ValueError as exc:
@@ -93,7 +93,7 @@ def compute_hydrophobicity_indicator(composition: Dict[str, Dict[str, float]]) -
     Returns:
         int: Hydrophobicity indicator (1 or 0).
     """
-    is_hydrophobic = any(Elements.get_element_by_name(elem_name).hydrophobicity for elem_name in composition['A'])
+    is_hydrophobic = any(Element.get_element_by_name(elem_name).hydrophobicity for elem_name in composition['A'])
     return 1 if is_hydrophobic else 0
 
 
@@ -108,7 +108,7 @@ def compute_effective_polarizability(composition: Dict[str, Dict[str, float]], s
     """
     polarizability = 0.0
     for elem_name, coeff in composition[site].items():
-        element = Elements.get_element_by_name(elem_name)
+        element = Element.get_element_by_name(elem_name)
         r = element.ionic_radii
         m = element.atomic_mass
         weight = coeff if site in [Site.A.value, Site.B.value] else coeff / 3.0

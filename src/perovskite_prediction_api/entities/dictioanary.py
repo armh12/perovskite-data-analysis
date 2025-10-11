@@ -2,7 +2,7 @@ import enum
 
 
 @enum.unique
-class Elements(enum.Enum):
+class Element(enum.Enum):
     def __new__(cls, *value: tuple):
         obj = object.__new__(cls)
         obj._value_ = value
@@ -52,13 +52,13 @@ class Elements(enum.Enum):
     @classmethod
     def get_element_by_name(cls, name: str):
         """
-        Retrieves an Elements enum member by its name (e.g., 'MA', 'Pb', 'Br').
+        Retrieves an Element enum member by its name (e.g., 'MA', 'Pb', 'Br').
 
         Args:
             name (str): The name of the element/ion to find.
 
         Returns:
-            Elements: The matching Elements enum member.
+            Element: The matching Element enum member.
 
         Raises:
             ValueError: If no element with the given name is found.
@@ -253,3 +253,8 @@ class ETLStacks(BaseStructureDictionary):
     SN_O2_np = "SnO2-np", 5
     SN_O2_c = "SnO2-c", 6
     C60_BCP = "C60 | BCP", 7
+    
+    
+@enum.unique
+class SavedModelName(enum.Enum):
+    BAND_GAP_XGB = "xgboost_band_gap.json"

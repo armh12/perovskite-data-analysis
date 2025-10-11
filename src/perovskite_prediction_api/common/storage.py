@@ -30,15 +30,17 @@ class FileStorage(ABC):
 
 
 class GoogleDriveStorage(FileStorage):
-    def __init__(self,
-                 credentials: Credentials, ):
+    def __init__(
+        self, credentials: Credentials
+    ):
         self._credentials = credentials
         self._service = build('drive', 'v3', credentials=self._credentials)
 
     def download_file(self, filepath: str) -> bytes:
         file_id = self._get_file_id_by_path(filepath)
         if not file_id:
-            raise FileNotFoundError(f"File '{filepath}' not found on Google Drive.")
+            raise FileNotFoundError(
+                f"File '{filepath}' not found on Google Drive.")
 
         request = self._service.files().get_media(fileId=file_id)
         fh = io.BytesIO()
@@ -79,7 +81,8 @@ class GoogleDriveStorage(FileStorage):
         elif file_format == 'pkl':
             df = pd.read_pickle(io.BytesIO(file_bytes))
         else:
-            raise ValueError("Unsupported file format. Use 'csv', 'xlsx', 'parquet' or 'pkl.")
+            raise ValueError(
+                "Unsupported file format. Use 'csv', 'xlsx', 'parquet' or 'pkl.")
         return df
 
     # noinspection PyTypeChecker
@@ -101,11 +104,13 @@ class GoogleDriveStorage(FileStorage):
             content = buffer.getvalue()
             mime_type = 'application/octet-stream'
         else:
-            raise ValueError("Unsupported file format. Use 'csv', 'xlsx', or 'parquet'.")
+            raise ValueError(
+                "Unsupported file format. Use 'csv', 'xlsx', or 'parquet'.")
 
         file_metadata = {'name': filename}
         file_buffer = io.BytesIO(content)
-        media = MediaIoBaseUpload(file_buffer, mimetype=mime_type, resumable=True)
+        media = MediaIoBaseUpload(
+            file_buffer, mimetype=mime_type, resumable=True)
         file = self._service.files().create(
             body=file_metadata,
             media_body=media,

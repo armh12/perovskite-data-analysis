@@ -41,8 +41,8 @@ def assert_valid_oqmd_structures(structures_response):
     assert "chemical_formula_descriptive" in attrs
     assert "_oqmd_prototype" in attrs
     assert "_oqmd_spacegroup" in attrs
-    assert isinstance(attrs["nelements"], int)
-    assert isinstance(attrs["elements"], list)
+    assert isinstance(attrs["nElement"], int)
+    assert isinstance(attrs["Element"], list)
     assert isinstance(attrs["nsites"], int)
     assert isinstance(attrs["lattice_vectors"], list)
     assert isinstance(attrs["species_at_sites"], list)
