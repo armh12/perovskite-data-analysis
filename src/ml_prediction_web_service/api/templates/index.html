@@ -3,86 +3,315 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Perovskite Lab | ML Predictor</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <title>Perovskite Intelligence Lab</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=1.6">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen">
-    <nav class="border-b border-slate-800 p-4 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold tracking-tight text-blue-400">PerovSKITE<span class="text-white">.AI</span></h1>
-            <div class="space-x-6 text-sm">
-                <a href="#" class="hover:text-blue-400 font-medium">Predictor</a>
-                <a href="/docs" target="_blank" class="hover:text-blue-400 text-slate-400">API Docs</a>
-            </div>
+<body>
+    <header>
+        <div class="logo-container">
+            <div class="logo-icon"></div>
+            <div class="logo-text">Perovskite Lab</div>
         </div>
-    </nav>
+        <nav class="main-nav">
+            <button class="nav-btn active" data-tab="dashboard">Dashboard</button>
+            <button class="nav-btn" data-tab="discovery">Discovery</button>
+            <button class="nav-btn" data-tab="prediction">Prediction Lab</button>
+            <button class="nav-btn" data-tab="explorer">Data Explorer</button>
+        </nav>
+    </header>
 
-    <main class="max-w-4xl mx-auto py-12 px-4">
-        <header class="mb-12">
-            <h2 class="text-4xl font-extrabold mb-2 text-white">Band Gap & Stability</h2>
-            <p class="text-slate-400">Machine learning pipeline for perovskite solar cell optimization.</p>
-        </header>
+    <main>
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="tab-content active">
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <span class="label">Materials in Database</span>
+                    <div class="metric-value" id="stat-materials">970</div>
+                </div>
+                <div class="metric-card">
+                    <span class="label">Simulated Device Stacks</span>
+                    <div class="metric-value" id="stat-panels">33,546</div>
+                </div>
+                <div class="metric-card">
+                    <span class="label">Active ML Models</span>
+                    <div class="metric-value">12</div>
+                </div>
+            </div>
 
-        <div class="bg-slate-800/50 rounded-2xl border border-slate-700 p-8 shadow-2xl">
-            <h3 class="text-lg font-semibold mb-6 flex items-center text-blue-400">
-                <span class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center mr-3 text-xs">01</span>
-                Perovskite Composition
-            </h3>
+            <div class="advanced-card">
+                <h3>Global Feature Importance</h3>
+                <p class="text-muted" style="margin-bottom: 1.5rem;">Relative impact of chemical and device descriptors on target properties.</p>
+                
+                <nav class="sub-nav">
+                    <button class="sub-nav-btn active" data-subtab="shap-stability">Stability (T80)</button>
+                    <button class="sub-nav-btn" data-subtab="shap-bandgap">Band Gap (Eg)</button>
+                    <button class="sub-nav-btn" data-subtab="shap-efficiency">Efficiency (PCE)</button>
+                </nav>
 
-            <div id="composition-app">
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-slate-400 mb-3 uppercase tracking-wider">A-Site Cations</label>
-                    <div id="a-site-list" class="space-y-3">
+                <div class="chart-container" style="height: 450px; margin-top: 1rem;">
+                    <canvas id="shapChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Discovery Section (Inverse Design) -->
+        <section id="discovery" class="tab-content">
+            <div class="discovery-layout">
+                <div class="discovery-sidebar">
+                    <div class="card">
+                        <h3>Inverse Design Search</h3>
+                        <p class="text-muted">Bayesian Optimization (Optuna) finds compositions matching target performance.</p>
+                        
+                        <div class="discovery-form-box">
+                            <label>Target Property</label>
+                            <select id="discoveryMode">
+                                <option value="band_gap">Optical Band Gap (eV)</option>
+                                <option value="solar_panel">Stability Lifetime (T80)</option>
+                            </select>
+
+                            <label>Target Value</label>
+                            <input type="number" id="discoveryTarget" value="1.55" step="0.01">
+
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="discoveryInorganic">
+                                <label for="discoveryInorganic">Inorganic Only</label>
+                            </div>
+
+                            <div class="discovery-advanced-fields">
+                                <label>A-site Cations</label>
+                                <select id="discovery_aPool" multiple style="height: 100px; padding: 5px;">
+                                    <option value="Cs" selected>Cs</option>
+                                    <option value="FA" selected>FA</option>
+                                    <option value="MA" selected>MA</option>
+                                    <option value="Rb">Rb</option>
+                                    <option value="BA">BA</option>
+                                    <option value="PEA">PEA</option>
+                                </select>
+
+                                <label>C-site Anions</label>
+                                <select id="discovery_cPool" multiple style="height: 60px; padding: 5px;">
+                                    <option value="I" selected>I</option>
+                                    <option value="Br" selected>Br</option>
+                                    <option value="Cl">Cl</option>
+                                </select>
+
+                                <div id="solarDiscoveryParams" class="hidden">
+                                    <label>Architectures</label>
+                                    <select id="discovery_archPool" multiple style="height: 60px; padding: 5px;">
+                                        <option value="nip" selected>n-i-p (Standard)</option>
+                                        <option value="pin" selected>p-i-n (Inverted)</option>
+                                    </select>
+
+                                    <label>ETL Stacks</label>
+                                    <select id="discovery_etlPool" multiple style="height: 100px; padding: 5px;"></select>
+
+                                    <label>HTL Stacks</label>
+                                    <select id="discovery_htlPool" multiple style="height: 100px; padding: 5px;"></select>
+
+                                    <label>Backcontacts</label>
+                                    <select id="discovery_bcPool" multiple style="height: 60px; padding: 5px;">
+                                        <option value="Au" selected>Au</option>
+                                        <option value="Ag" selected>Ag</option>
+                                    </select>
+
+                                    <div class="form-grid" style="margin-top: 1rem;">
+                                        <div class="form-group">
+                                            <label>Annealing Temp (°C)</label>
+                                            <input type="number" id="discovery_annTemp" placeholder="AI Optimize" step="0.1">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Annealing Time (min)</label>
+                                            <input type="number" id="discovery_annTime" placeholder="AI Optimize" step="0.1">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button id="runDiscovery" class="btn-primary main-predict-btn" style="margin-top: 1.5rem;">Start AI Search</button>
                         </div>
-                    <button onclick="addRow('a-site-list')" class="mt-3 text-xs font-bold text-blue-400 hover:text-blue-300 transition-colors uppercase">
-                        + Add Cation
-                    </button>
-                </div>
-
-                <hr class="border-slate-700 my-6">
-
-                <div class="grid grid-cols-2 gap-6 mb-8">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-400 mb-2 uppercase tracking-wider">B-Site (Metal)</label>
-                        <select id="b-site-element" class="w-full bg-slate-700 border-none rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500">
-                            <option value="Pb">Pb (Lead)</option>
-                            <option value="Sn">Sn (Tin)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-400 mb-2 uppercase tracking-wider">C-Site (Halide)</label>
-                        <select id="c-site-element" class="w-full bg-slate-700 border-none rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500">
-                            <option value="I">I (Iodide)</option>
-                            <option value="Br">Br (Bromide)</option>
-                            <option value="Cl">Cl (Chloride)</option>
-                        </select>
                     </div>
                 </div>
-
-                <button id="predict-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-blue-900/20 active:scale-95">
-                    Run ML Inference
-                </button>
+                <div class="discovery-results" id="discoveryResultArea">
+                    <div class="placeholder">
+                        <p>Configure search parameters and run the AI engine to see results.</p>
+                    </div>
+                </div>
             </div>
-        </div>
+        </section>
 
-        <div id="result-card" class="mt-8 hidden">
-             <div class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-8 text-white shadow-xl transition-all">
-                <span class="text-blue-200 text-sm uppercase tracking-widest font-semibold">Predicted Band Gap</span>
-                <div class="text-6xl font-black mt-2 tracking-tighter">
-                    <span id="prediction-value">---</span>
-                    <span class="text-2xl font-light opacity-80">eV</span>
+        <!-- Prediction Lab Section -->
+        <section id="prediction" class="tab-content">
+            <div class="lab-layout">
+                <div class="advanced-form">
+                    <nav class="sub-nav">
+                        <button class="sub-nav-btn active" data-subtab="stability-lab">Stability (T80)</button>
+                        <button class="sub-nav-btn" data-subtab="ts80m-lab">Stability (TS80m)</button>
+                        <button class="sub-nav-btn" data-subtab="bandgap-lab">Band Gap (Eg)</button>
+                        <button class="sub-nav-btn" data-subtab="jv-lab">Efficiency (JV)</button>
+                    </nav>
+
+                    <!-- Forms shared common Site Structure -->
+                    <div class="composition-header">
+                        <h4>Material Composition</h4>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>A-site (e.g. Cs0.05FA0.79MA0.16)</label>
+                                <input type="text" class="comp-input" id="inp_aSite" value="Cs0.17FA0.83">
+                            </div>
+                            <div class="form-group">
+                                <label>B-site</label>
+                                <input type="text" class="comp-input" id="inp_bSite" value="Pb1.0">
+                            </div>
+                            <div class="form-group">
+                                <label>C-site</label>
+                                <input type="text" class="comp-input" id="inp_cSite" value="I3.0">
+                            </div>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="inp_inorganic">
+                            <label for="inp_inorganic">Purely Inorganic</label>
+                        </div>
+                    </div>
+
+                    <div id="stability-lab" class="sub-tab-content active">
+                        <div class="form-section">
+                            <h4>Operating Conditions</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Temperature (°C)</label>
+                                    <input type="number" id="s_temp" value="25">
+                                </div>
+                                <div class="form-group">
+                                    <label>Humidity (%)</label>
+                                    <input type="number" id="s_hum" value="50">
+                                </div>
+                                <div class="form-group">
+                                    <label>Initial PCE (%)</label>
+                                    <input type="number" id="s_pce" value="18.5" step="0.1">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="ts80m-lab" class="sub-tab-content">
+                        <div class="form-section">
+                            <p class="text-muted">Predicting modified stability metric (TS80m) which normalizes stress factors.</p>
+                        </div>
+                    </div>
+
+                    <div id="bandgap-lab" class="sub-tab-content">
+                        <p class="text-muted">Predicting optical properties based on Goldschmidt factors and atomic descriptors.</p>
+                    </div>
+
+                    <div id="jv-lab" class="sub-tab-content">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Band Gap (eV)</label>
+                                <input type="number" id="jv_bg" value="1.55" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label>Cell Area (cm²)</label>
+                                <input type="number" id="jv_area" value="0.1" step="0.01">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="device-config">
+                        <h4>Device Architecture</h4>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Stack</label>
+                                <select id="p_arch">
+                                    <option value="nip">n-i-p (Standard)</option>
+                                    <option value="pin">p-i-n (Inverted)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>ETL</label>
+                                <select id="p_etl"></select>
+                            </div>
+                            <div class="form-group">
+                                <label>HTL</label>
+                                <select id="p_htl"></select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="runPrediction" class="btn-primary main-predict-btn">Run Lab Simulation</button>
                 </div>
-             </div>
-        </div>
+
+                <div class="result-display-area" id="labResult">
+                    <div class="placeholder">Results will appear here</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Explorer Section -->
+        <section id="explorer" class="tab-content">
+            <div class="explorer-header">
+                <div class="table-controls">
+                    <nav class="sub-nav" style="margin-bottom: 0; border-bottom: none; padding-bottom: 0;">
+                        <button class="sub-nav-btn active" data-subtab="data-view">Table View</button>
+                        <button class="sub-nav-btn" data-subtab="dictionary-view">Data Dictionary</button>
+                    </nav>
+                </div>
+            </div>
+
+            <div id="data-view" class="sub-tab-content active">
+                <div class="explorer-header" style="margin-top: 1.5rem;">
+                    <div class="table-controls">
+                        <select id="tableSelector">
+                            <option value="perovskites">Perovskite Materials</option>
+                            <option value="solar_panels">Solar Device Experiments</option>
+                        </select>
+                    </div>
+                    <div class="pagination-modern">
+                        <button id="prevPage" class="page-btn">←</button>
+                        <span id="pageInfo">Page 1</span>
+                        <button id="nextPage" class="page-btn">→</button>
+                    </div>
+                </div>
+                <div class="table-container-wrapper">
+                    <div class="table-horizontal-slider">
+                        <table id="dataTable">
+                            <thead><tr id="tableHeader"></tr></thead>
+                            <tbody id="tableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="dictionary-view" class="sub-tab-content">
+                <div class="table-container-wrapper" style="margin-top: 1.5rem;">
+                    <table id="dictionaryTable">
+                        <thead>
+                            <tr>
+                                <th>Field Name</th>
+                                <th>Description</th>
+                                <th>Research Context</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dictionaryBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
     </main>
 
-    <script src="/static/js/main.js"></script>
-    <script>
-        // Inline check: Ensure at least one row exists on load
-        window.addEventListener('DOMContentLoaded', () => {
-            if (typeof addRow === 'function') addRow('a-site-list');
-        });
-    </script>
+    <div id="globalLoader" class="loader-overlay hidden">
+        <div class="spinner"></div>
+        <p>Processing Chemical Data...</p>
+    </div>
+
+    <footer>
+        <p>Perovskite Intelligence Lab</p>
+    </footer>
+
+    <!-- Modular JS -->
+    <script src="/static/js/api.js?v=1.6"></script>
+    <script src="/static/js/ui.js?v=1.6"></script>
+    <script src="/static/js/app.js?v=1.6"></script>
 </body>
 </html>

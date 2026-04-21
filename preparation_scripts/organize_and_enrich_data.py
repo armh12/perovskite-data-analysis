@@ -24,7 +24,7 @@ def clean_messy_value(val):
         for f in found:
             try: nums.append(float(f))
             except ValueError: continue
-    return max(nums) if nums else np.nan
+    return np.mean(nums) if nums else np.nan
 
 def bin_transport_layer(val):
     if pd.isna(val) or str(val).lower() in ['none', 'unknown', '']: return 'None'
@@ -155,14 +155,22 @@ def process_single_experiment_file(raw_csv_path):
         if clean_col in df_solar.columns:
             df_solar[clean_col] = df_solar[clean_col].apply(clean_messy_value)
 
-    # SYNC & JOIN ALL FEATURES
-    # We join everything from df_perov_enriched into df_solar to ensure all sites and coefficients are present
+    # Keep solar panels light: remove material site/coef columns if they exist
+    # but keep the join key 'composition_long_form'
     df_solar.columns = df_solar.columns.str.lower()
-    df_solar_final = df_solar.merge(df_perov_enriched, on='composition_long_form', how='inner')
+    
+    # Filter to only device-specific columns + target columns
+    device_specific_base = [
+        'cell_architecture', 'composition_long_form', 'etl_stack_sequence', 'htl_stack_sequence', 'backcontact_stack_sequence',
+        'jv_default_pce', 'jv_default_voc', 'jv_default_jsc', 'jv_default_ff',
+        'stability_pce_t80', 'stability_time_total_exposure', 'stability_protocol', 'stability_light_intensity',
+        'perovskite_annealing_temp', 'perovskite_annealing_time', 'acc_temp', 'acc_humidity', 'stability_ts80', 'stability_ts80m'
+    ]
+    actual_cols = [c for c in device_specific_base if c in df_solar.columns]
+    df_solar_final = df_solar[actual_cols].copy()
     
     if 'jv_default_pce' in df_solar_final.columns:
         df_solar_final = df_solar_final[(df_solar_final['jv_default_pce'] > 2.0) & (df_solar_final['jv_default_pce'] < 26.0)]
-        df_solar_final['stress_proxy'] = df_solar_final['jv_default_pce'] * df_solar_final['tolerance_factor']
 
     df_solar_final['etl_stack_sequence'] = df_solar_final['etl_stack_sequence'].apply(bin_transport_layer)
     df_solar_final['htl_stack_sequence'] = df_solar_final['htl_stack_sequence'].apply(bin_transport_layer)

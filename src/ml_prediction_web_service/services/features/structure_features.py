@@ -15,6 +15,24 @@ def calculate_effective_radii(fractions: List[ElementFraction]) -> float:
     return r_eff / total_coef if total_coef > 0 else 0.0
 
 
+def calculate_weighted_properties(fractions: List[ElementFraction]) -> Tuple[float, float]:
+    """
+    Calculate weighted average electronegativity and atomic mass.
+    Returns:
+        Tuple[float, float]: (weighted_en, weighted_mass)
+    """
+    weighted_en = 0.0
+    weighted_mass = 0.0
+    total_coef = 0.0
+    for item in fractions:
+        weighted_en += item.frequence * item.name.electronegativity
+        weighted_mass += item.frequence * item.name.atomic_mass
+        total_coef += item.frequence
+    if total_coef == 0:
+        return 0.0, 0.0
+    return weighted_en / total_coef, weighted_mass / total_coef
+
+
 def compute_dimensionality_indicator(r_a_eff: float) -> int:
     """
     Compute the dimensionality indicator (1 for 2D if r_A_eff > 3.0, 0 for 3D).

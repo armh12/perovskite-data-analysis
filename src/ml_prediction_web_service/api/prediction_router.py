@@ -11,7 +11,7 @@ from ml_prediction_web_service.entities.entities import (
 from ml_prediction_web_service.services.prediction_service import (
     predict_band_gap_service,
     predict_pce_t80_service,
-    predict_jv_default_pce_service
+    predict_jv_pce_service, predict_ts80m_service
 )
 
 router = APIRouter(prefix="/prediction", tags=["Prediction Models"])
@@ -33,9 +33,17 @@ def predict_stability_pce_t80(
     return predict_pce_t80_service(request, components)
 
 
+@router.post("/stability_ts80m")
+def predict_stability_ts80m(
+        request: PCET80PredictionRequest,
+        components: AppComponents = Depends(build_components)
+):
+    return predict_ts80m_service(request, components)
+
+
 @router.post("/jv_default_pce")
 def predict_jv_default_pce(
         request: JVDefaultPCEPredictionRequest,
         components: AppComponents = Depends(build_components)
 ):
-    return predict_jv_default_pce_service(request, components)
+    return predict_jv_pce_service(request, components)

@@ -1,95 +1,88 @@
-import os
-
-import pytest
 from typing import List
 
-from dotenv import load_dotenv
+import pytest
 
-from ml_prediction_web_service.components import AppComponents
-from ml_prediction_web_service.entities.dictionary import (
-    Element, SpaceGroup, Dimension, BackContact, ETLStack, CellArchitecture, StabilityProtocol, HTLStack
-)
+from ml_prediction_web_service.entities.dictionary import Element
 from ml_prediction_web_service.entities.entities import (
-    BandGapPredictionRequest, PerovskiteComposition, ElementFraction,
-    PCET80PredictionRequest, StabilityTemperatureRange, JVDefaultPCEPredictionRequest
+    BandGapPredictionRequest,
+    ElementFraction,
+    PerovskiteComposition,
+    PCET80PredictionRequest,
+    JVDefaultPCEPredictionRequest
 )
-from ml_prediction_web_service.repository.model_repository import LocalModelRepository
 
-load_dotenv()
-
-# Use the absolute path to the ml_models directory in the project
-MODELS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../ml_models"))
+PEROVSKITE_COMPOSITIONS: List[PerovskiteComposition] = [
+    PerovskiteComposition(
+        A_site=[ElementFraction(name=Element.CS, frequence=0.05), ElementFraction(name=Element.FA, frequence=0.79),
+                ElementFraction(name=Element.MA, frequence=0.16)],
+        B_site=[ElementFraction(name=Element.PB, frequence=1.0)],
+        C_site=[ElementFraction(name=Element.I, frequence=2.49), ElementFraction(name=Element.BR, frequence=0.51)]
+    ),
+    PerovskiteComposition(
+        A_site=[ElementFraction(name=Element.MA, frequence=1.0)],
+        B_site=[ElementFraction(name=Element.PB, frequence=1.0)],
+        C_site=[ElementFraction(name=Element.I, frequence=3.0)]
+    )
+]
 
 BAND_GAP_PREDICTION_REQUESTS: List[BandGapPredictionRequest] = [
     BandGapPredictionRequest(
-        perovskite_composition=PerovskiteComposition(
-            A_site=[ElementFraction(name=Element.MA, frequence=1.0)],
-            B_site=[ElementFraction(name=Element.PB, frequence=1.0)],
-            C_site=[ElementFraction(name=Element.CL, frequence=3.0)],
-        ),
-        space_group=SpaceGroup.CUBIC,
-        dimension_list_of_layers=3.0,
-        inorganic_composition=True,
-        dimension=Dimension.THREE_DIM
+        perovskite_composition=PEROVSKITE_COMPOSITIONS[0],
+        inorganic_composition=False
     ),
-
     BandGapPredictionRequest(
-        perovskite_composition=PerovskiteComposition(
-            A_site=[ElementFraction(name=Element.MA, frequence=0.5), ElementFraction(name=Element.FA, frequence=0.5)],
-            B_site=[ElementFraction(name=Element.PB, frequence=1.0)],
-            C_site=[ElementFraction(name=Element.CL, frequence=1.5), ElementFraction(name=Element.I, frequence=1.5)],
-        ),
-        space_group=SpaceGroup.CUBIC,
-        dimension_list_of_layers=3.0,
-        inorganic_composition=True,
-        dimension=Dimension.THREE_DIM
+        perovskite_composition=PEROVSKITE_COMPOSITIONS[1],
+        inorganic_composition=False
     )
 ]
 
 PCE_T80_PREDICTION_REQUESTS: List[PCET80PredictionRequest] = [
     PCET80PredictionRequest(
-        perovskite_composition=PerovskiteComposition(
-            A_site=[ElementFraction(name=Element.MA, frequence=1.0)],
-            B_site=[ElementFraction(name=Element.PB, frequence=1.0)],
-            C_site=[ElementFraction(name=Element.I, frequence=3.0)],
-        ),
-        temperature_range=StabilityTemperatureRange(temperature_start=25.0, temperature_end=85.0),
-        band_gap=1.6,
-        dimension_list_of_layers=3,
+        perovskite_composition=PEROVSKITE_COMPOSITIONS[0],
+        inorganic_composition=False,
+        acc_temp=25.0,
+        acc_humidity=50.0,
+        band_gap=1.55,
         cell_area=0.1,
-        pce_initial=20.0,
-        stability_protocol=StabilityProtocol.ISOS_D_1,
-        stability_light_intensity=100.0,
-        stability_time_total_exposure=1000.0,
-        backcontact=BackContact.Au,
-        etl_stack_sequence=ETLStack.TI_O2_c,
-        cell_architecture=CellArchitecture.NIP
+        pce_initial=20.1,
+        voc_initial=1.1,
+        jsc_initial=22.0,
+        ff_initial=0.75,
+        stability_protocol="ISOS-L-1",
+        stability_light_intensity=1.0,
+        perovskite_annealing_temp=100.0,
+        perovskite_annealing_time=10.0,
+        backcontact="Au",
+        etl_stack_sequence="SnO2",
+        htl_stack_sequence="Spiro-MeOTAD",
+        cell_architecture="nip"
     )
 ]
 
-JV_PCE_PREDICTION_REQUESTS: List[JVDefaultPCEPredictionRequest] = [
+INITIAL_PCE_PREDICTION_REQUESTS: List[JVDefaultPCEPredictionRequest] = [
     JVDefaultPCEPredictionRequest(
-        perovskite_composition=PerovskiteComposition(
-            A_site=[ElementFraction(name=Element.FA, frequence=1.0)],
-            B_site=[ElementFraction(name=Element.PB, frequence=1.0)],
-            C_site=[ElementFraction(name=Element.I, frequence=3.0)],
-        ),
-        band_gap=1.5,
-        dimension_list_of_layers=3,
+        perovskite_composition=PEROVSKITE_COMPOSITIONS[0],
+        inorganic_composition=False,
+        band_gap=1.55,
         cell_area=0.1,
-        backcontact=BackContact.Ag,
-        etl_stack_sequence=ETLStack.SN_O2_np,
-        htl_stack_sequence=HTLStack.SPIRO_MEOTAD,
-        cell_architecture=CellArchitecture.NIP
+        perovskite_annealing_temp=100.0,
+        perovskite_annealing_time=10.0,
+        backcontact="Au",
+        etl_stack_sequence="SnO2",
+        htl_stack_sequence="Spiro-MeOTAD",
+        cell_architecture="nip"
     )
 ]
+
+@pytest.fixture
+def band_gap_prediction_requests() -> List[BandGapPredictionRequest]:
+    return BAND_GAP_PREDICTION_REQUESTS
 
 
 @pytest.fixture
-def test_components() -> AppComponents:
-    model_repository = LocalModelRepository(
-        models_path=MODELS_PATH
-    )
-    return AppComponents(
-        model_repository=model_repository,
-    )
+def pce_t80_prediction_requests() -> List[PCET80PredictionRequest]:
+    return PCE_T80_PREDICTION_REQUESTS
+
+@pytest.fixture
+def initial_pce_prediction_requests() -> List[JVDefaultPCEPredictionRequest]:
+    return INITIAL_PCE_PREDICTION_REQUESTS

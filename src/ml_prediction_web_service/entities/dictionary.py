@@ -12,6 +12,29 @@ class BaseStructureDictionary(enum.Enum):
         return self.value[1]
 
     @classmethod
+    def _missing_(cls, value):
+        """
+        Allows Pydantic and FastAPI to map string names (like "Cs") 
+        to the complex tuple-based Enum members.
+        Handles case-insensitivity and common variations.
+        """
+        if not isinstance(value, str):
+            return None
+        
+        clean_val = value.strip().lower()
+        
+        for member in cls:
+            if member.value[0].strip().lower() == clean_val:
+                return member
+        
+        for member in cls:
+            name = member.value[0].strip().lower()
+            if name.startswith(clean_val) or clean_val.startswith(name):
+                return member
+                
+        return None
+
+    @classmethod
     def get_code_by_name(cls, name):
         """
         Get the code (value[1]) by nm name (value[0]).
